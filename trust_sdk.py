@@ -28,11 +28,11 @@ def verify_report(payload, expected_claim_id, trusted_keys=()):
     trusted = set(trusted_keys)
     seen = set()
 
-    def checked(envelope, version):
+    def checked(envelope, versions):
         if not authentic(envelope) or len(canonical(envelope)) > 65536:
             raise ValueError("invalid signed envelope")
         record = envelope["record"]
-        if record["body"]["version"] != version:
+        if record["body"]["version"] not in versions:
             raise ValueError("unexpected record version")
         key = (record["id"], envelope["public_key"])
         if key in seen:
@@ -41,7 +41,7 @@ def verify_report(payload, expected_claim_id, trusted_keys=()):
         return record
 
     for envelope in claims:
-        if checked(envelope, 1)["id"] != expected_claim_id:
+        if checked(envelope, (1,))["id"] != expected_claim_id:
             raise ValueError("claim proof does not match requested identifier")
     claim = claims[0]["record"]["body"]
     verified = {r: [] for r in RELATIONS}
@@ -50,13 +50,14 @@ def verify_report(payload, expected_claim_id, trusted_keys=()):
             if not isinstance(entry, dict):
                 raise ValueError("invalid evidence entry")
             envelope = entry.get("envelope")
-            record = checked(envelope, 2)
+            record = checked(envelope, (2, 3))
             body = record["body"]
             if body["target"] != expected_claim_id or body["relation"] != relation:
                 raise ValueError("evidence relationship does not match signed proof")
             verified[relation].append({"id": record["id"], "excerpt": body["claim"],
                                        "sources": list(body["sources"]), "signer": envelope["public_key"],
-                                       "trusted_by_caller": envelope["public_key"] in trusted})
+                                       "trusted_by_caller": envelope["public_key"] in trusted,
+                                       "snapshot_sha256": body.get("snapshot_sha256")})
     return {"claim_id": expected_claim_id, "claim": claim,
             "claim_signers": [e["public_key"] for e in claims],
             "evidence": verified,
@@ -88,3 +89,16 @@ def check_excerpt(snapshot, excerpt, expected_sha256=None):
             "byte_offset": offset if offset >= 0 else None,
             "expected_digest_checked": expected_sha256 is not None,
             "source_authenticity": "not_determined", "entailment": "not_determined"}
+
+
+def verify_snapshot(envelope, snapshot):
+    """Validate signed snapshot binding and exact quotation in supplied bytes."""
+    if not authentic(envelope) or len(canonical(envelope)) > 65536:
+        raise ValueError("invalid signed envelope")
+    body = envelope["record"]["body"]
+    if body["version"] != 3:
+        raise ValueError("evidence has no signed snapshot binding")
+    result = check_excerpt(snapshot, body["claim"], body["snapshot_sha256"])
+    if not result["exact_match"]:
+        raise ValueError("signed excerpt missing from matching snapshot")
+    return dict(result, evidence_id=envelope["record"]["id"], source=body["sources"][0])
