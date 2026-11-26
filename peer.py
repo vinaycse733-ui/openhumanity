@@ -1,6 +1,7 @@
 """Opt-in replication over loopback HTTP or verified HTTPS."""
 import argparse
 import json
+import re
 import sqlite3
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlsplit
@@ -21,7 +22,19 @@ def pull(store, url):
         raise ValueError("use HTTPS or loopback HTTP")
     opener = build_opener(NoRedirect(), ProxyHandler({})) if u.scheme == "http" else build_opener(NoRedirect())
     with opener.open(url.rstrip("/") + "/v1/bundle", timeout=15) as response:
+        if response.headers.get_all("Content-Type") is None or len(response.headers.get_all("Content-Type")) != 1 or response.headers.get_content_type() != "application/json":
+            raise ValueError("expected a JSON peer bundle")
+        lengths = response.headers.get_all("Content-Length")
+        expected = None
+        if lengths is not None:
+            if len(lengths) != 1 or not re.fullmatch(r"[0-9]{1,10}", lengths[0]) or response.headers.get("Transfer-Encoding") is not None:
+                raise ValueError("invalid peer response framing")
+            expected = int(lengths[0])
+            if expected > LIMIT:
+                raise ValueError("bundle too large")
         raw = response.read(LIMIT + 1)
+        if expected is not None and len(raw) != expected:
+            raise ValueError("truncated peer response")
     if len(raw) > LIMIT:
         raise ValueError("bundle too large")
     bundle = json.loads(raw)
