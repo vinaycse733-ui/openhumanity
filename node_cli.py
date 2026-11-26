@@ -38,9 +38,10 @@ def main():
         with os.fdopen(os.open(args.key, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "wb") as f:
             f.write(key)
         return
-    if args.command in ("doctor", "backup", "search", "export") and not Path(args.db).is_file():
+    read_only = args.command in ("doctor", "backup", "search", "export")
+    if read_only and not Path(args.db).is_file():
         p.error("database does not exist")
-    store = Store(args.db)
+    store = Store(args.db, read_only=read_only)
     try:
         if args.command == "add":
             key = serialization.load_pem_private_key(Path(args.key).read_bytes(), password=getpass.getpass("Key passphrase: ").encode())
@@ -69,7 +70,7 @@ def main():
             try:
                 with contextlib.closing(sqlite3.connect(destination)) as target:
                     store.db.backup(target)
-                snapshot = Store(destination)
+                snapshot = Store(destination, read_only=True)
                 try:
                     if snapshot.db.execute("PRAGMA quick_check").fetchall() != [("ok",)]:
                         raise ValueError("backup SQLite integrity check failed")
