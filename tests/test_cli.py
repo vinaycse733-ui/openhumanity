@@ -40,3 +40,32 @@ class CliTests(unittest.TestCase):
             with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
                 run("--db", str(missing), "doctor")
             self.assertFalse(missing.exists())
+
+    def test_missing_read_database_does_not_create_file(self):
+        with tempfile.TemporaryDirectory() as d:
+            missing = Path(d) / 'missing.sqlite'
+            bundle = Path(d) / 'export.json'
+            for command in [('search', 'query'), ('export', str(bundle))]:
+                with self.subTest(command=command), patch('sys.argv', ['node_cli.py', '--db', str(missing), *command]), contextlib.redirect_stderr(io.StringIO()), contextlib.redirect_stdout(io.StringIO()):
+                    with self.assertRaises(SystemExit):
+                        main()
+                    self.assertFalse(missing.exists())
+                    self.assertFalse(bundle.exists())
+
+    @unittest.skipUnless(__import__('os').name == 'posix', 'POSIX mode bits')
+    def test_export_private_permissions(self):
+        import os
+        from node_store import Store
+        with tempfile.TemporaryDirectory() as d:
+            database = Path(d) / 'node.sqlite'
+            Store(database).close()
+            bundle = Path(d) / 'export.json'
+            old = os.umask(0)
+            try:
+                with patch('sys.argv', ['node_cli.py', '--db', str(database), 'export', str(bundle)]):
+                    main()
+                    self.assertEqual(bundle.stat().st_mode & 0o777, 0o600)
+                    with self.assertRaises(FileExistsError):
+                        main()
+            finally:
+                os.umask(old)
