@@ -28,4 +28,3 @@ jobs:
       - run: openhumanity-ask --help
       - run: openhumanity-ai --help
       - run: openhumanity-model-smoke --help
-      - run: openhumanity-model-smoke --help
