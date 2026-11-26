@@ -2,9 +2,9 @@
 
 Knowledge belongs to everyone.
 
-An experimental knowledge commons with portable, source-backed claims and content-addressed revisions.
+An experimental, model-independent AI evidence layer with portable, source-backed claims, signed evidence and content-addressed revisions. It reports provenance and disagreement, not automatic truth.
 
-## Install and run v0.1.0rc1
+## Install and run v0.2 development build
 
 Python 3.11+ is required. Clone the repository and run:
 
@@ -51,10 +51,23 @@ python peer.py --db second.sqlite pull http://127.0.0.1:8765
 ```
 Remote pulls require HTTPS. Serving remotely requires a separately configured TLS reverse proxy and access controls. The local peer endpoint only accepts a single loopback Host header with the listening port and rejects browser-origin requests. An independently secured reverse proxy would need to rewrite Host to that loopback value; remote proxy operation is not tested. Local HTTP pulls bypass environment proxies. The server exports the entire selected database, has no authentication, and is not suitable for direct internet exposure. Exchange is manual and limited to 1000 records and 8 MiB per network bundle. CLI file export/import is limited to 1000 records and 64 MiB; larger databases require a future paginated exchange implementation. No automatic discovery or pagination yet. The dedicated node_web.py browser UI uses signed node storage. The older index.html is separate.
 
+## AI evidence layer
+
+Create a claim using the signed node CLI, then use its returned identifier:
+
+```sh
+openhumanity-trust --db node.sqlite evidence CLAIM_ID supports "Relevant excerpt" --source https://example.org --key identity.pem
+openhumanity-trust --db node.sqlite report CLAIM_ID
+```
+
+Use `contradicts` or `context` for other evidence relationships. The report groups evidence by contributor-asserted relationship, includes signed envelopes and always sets truth_status to not_determined. Use repeated --trusted-key arguments to mark keys you trust locally; this is not a guarantee of factual accuracy. Source contents are not fetched or checked.
+
+With the local browser node running, GET http://127.0.0.1:8000/v1/claims/CLAIM_ID/report returns the same report without caller trust preferences. Keep the API local. It is not a hosted AI service. See TRUST_PROTOCOL.md for the compatibility and security contract.
+
 ## Roadmap
-1. Test and harden signed node and replication
-2. Pagination, conflict handling and explicit trust policies
-3. Source assessment and moderation
+1. Source snapshot verification and transparent citation provenance
+2. Evidence authoring UI, developer SDK and model integrations
+3. Explicit trust policies, revision comparisons and scalable exchange
 4. Accessibility and multilingual interface improvements
 
 Private development repository; public release and licensing pending review.
