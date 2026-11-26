@@ -5,7 +5,8 @@ import json
 from pathlib import Path
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from openhumanity import RELATIONS, create_evidence
+from openhumanity import RELATIONS, create_evidence, create_snapshot_evidence
+from trust_sdk import check_excerpt, MAX_SNAPSHOT_BYTES
 from node_store import Store, sign
 
 def report(store, claim_id, trusted_keys=()):
@@ -17,12 +18,13 @@ def report(store, claim_id, trusted_keys=()):
     groups = {relation: [] for relation in RELATIONS}
     for item in records:
         body = item["record"]["body"]
-        if body["version"] == 2 and body["target"] == claim_id:
+        if body["version"] in (2, 3) and body["target"] == claim_id:
             groups[body["relation"]].append({
                 "id": item["record"]["id"], "excerpt": body["claim"],
                 "sources": body["sources"], "signer": item["public_key"],
                 "trusted_by_caller": item["public_key"] in trusted,
-                "signature_valid": True, "envelope": item
+                "signature_valid": True, "envelope": item,
+                "snapshot_sha256": body.get("snapshot_sha256")
             })
     # Multiple keys or links do not establish independent corroboration.
     return {
@@ -49,6 +51,7 @@ def main():
     add.add_argument("excerpt")
     add.add_argument("--source", action="append", required=True)
     add.add_argument("--key", required=True)
+    add.add_argument("--snapshot", help="UTF-8 source file containing the exact excerpt")
     read = commands.add_parser("report")
     read.add_argument("claim_id")
     read.add_argument("--trusted-key", action="append", default=[])
@@ -61,7 +64,18 @@ def main():
             key = serialization.load_pem_private_key(Path(args.key).read_bytes(), password=getpass.getpass("Key passphrase: ").encode())
             if not isinstance(key, Ed25519PrivateKey):
                 parser.error("expected an Ed25519 key")
-            item = sign(create_evidence(args.target, args.relation, args.excerpt, args.source), key)
+            if args.snapshot:
+                if len(args.source) != 1:
+                    raise ValueError("snapshot evidence requires exactly one source")
+                with open(args.snapshot, "rb") as handle:
+                    snapshot = handle.read(MAX_SNAPSHOT_BYTES + 1)
+                match = check_excerpt(snapshot, args.excerpt)
+                if not match["exact_match"]:
+                    raise ValueError("excerpt not found in snapshot")
+                record = create_snapshot_evidence(args.target, args.relation, args.excerpt, args.source[0], match["sha256"])
+            else:
+                record = create_evidence(args.target, args.relation, args.excerpt, args.source)
+            item = sign(record, key)
             store.ingest([item])
             print(item["record"]["id"])
         else:
