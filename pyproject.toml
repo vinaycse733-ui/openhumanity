@@ -19,4 +19,4 @@ openhumanity-ai = "ai_adapter:main"
 openhumanity-ask = "trust_model:main"
 
 [tool.setuptools]
-py-modules = ["openhumanity", "node_store", "node_cli", "node_web", "peer", "trust", "trust_sdk", "trust_client", "trust_model"]
+py-modules = ["openhumanity", "node_store", "node_cli", "node_web", "peer", "trust", "trust_sdk", "trust_client", "trust_model", "ai_adapter"]
