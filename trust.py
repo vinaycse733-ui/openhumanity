@@ -22,13 +22,14 @@ def report(store, claim_id, trusted_keys=()):
                 "id": item["record"]["id"], "excerpt": body["claim"],
                 "sources": body["sources"], "signer": item["public_key"],
                 "trusted_by_caller": item["public_key"] in trusted,
-                "signature_valid": True
+                "signature_valid": True, "envelope": item
             })
     # Multiple keys or links do not establish independent corroboration.
     return {
         "schema": "openhumanity.trust-report.v1",
         "claim_id": claim_id, "claim": claims[0]["record"]["body"],
         "claim_signers": [item["public_key"] for item in claims],
+        "claim_envelopes": claims,
         "signature_valid": True,
         "evidence": groups,
         "counts": {relation: len({item["id"] for item in group}) for relation, group in groups.items()},
