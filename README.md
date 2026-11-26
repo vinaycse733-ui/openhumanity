@@ -129,6 +129,10 @@ For cooperating publishers, `source_auth.attest` signs exact source bytes and an
 
 Load a trusted local JSON policy with `PublisherPolicy.load("policy.json")` from `publisher_policy`. Its schema is openhumanity.publisher-policy.v1, with pins mapping exact HTTPS source identifiers to independently obtained publisher public keys and revoked_keys listing keys to reject. Call `policy.verify(envelope, source_bytes, attestation, expected_source)`. Unknown keys and sources are rejected. Revocation overrides pins; key rotation is manual. Policy files are local configuration and must be protected from unauthorized edits. See TRUST_PROTOCOL.md.
 
+## Publisher-enriched reports
+
+Applications can call `publisher_report.verify_with_publishers(payload, expected_claim_id, policy, proofs)` with a raw signed report, a caller-selected claim ID, a trusted local PublisherPolicy, and a mapping of evidence IDs to `(snapshot_bytes, attestation)` tuples. The result preserves every supplied evidence relationship and separately counts publisher-authenticated evidence. Missing proofs are labeled, invalid proofs are rejected, and truth remains undetermined. This is a developer SDK integration; the optional model adapters do not automatically obtain or verify publisher proofs yet.
+
 ## Roadmap
 1. Source snapshot verification and transparent citation provenance
 2. Evidence authoring UI, developer SDK and model integrations
