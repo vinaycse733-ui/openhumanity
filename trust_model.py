@@ -58,8 +58,17 @@ def ask_local(claim_id, question, model, node_port=8000, model_port=11434):
             raise ValueError("model omitted evidence citations")
     except (KeyError, TypeError, AttributeError, RecursionError) as exc:
         raise ValueError("invalid model response") from exc
+    cited = set(citations)
+    # Keep every verified relationship visible, even if the model ignores it.
+    evidence_index = {relation: [dict(item, cited_by_model=item["id"] in cited)
+                                 for item in verified["evidence"][relation]]
+                      for relation in RELATIONS}
+    uncited = {relation: sorted({item["id"] for item in evidence_index[relation]
+                                if not item["cited_by_model"]}) for relation in RELATIONS}
     return {"claim_id": claim_id, "model": model, "answer": text,
             "citations": list(dict.fromkeys(citations)), "evidence_counts": verified["counts"],
+            "evidence_index": evidence_index, "uncited_evidence_ids": uncited,
+            "conflicting_evidence_present": bool(verified["counts"]["supports"] and verified["counts"]["contradicts"]),
             "answer_status": "model_generated_not_fact_checked", "truth_status": "not_determined",
             "citation_status": "identifiers_checked_not_entailment"}
 
