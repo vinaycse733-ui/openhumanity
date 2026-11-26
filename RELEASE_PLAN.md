@@ -16,3 +16,9 @@ Do not mark verification complete without actual execution evidence. Keep reposi
 - Browser request and publishing integration tests exist, including invalid token and host rejection.
 - CI combined commit status returned no statuses; this is not evidence of passing tests.
 - Next: run the entire suite on a clean Python installation, verify signing and peer exchange end-to-end, and address failures before tagging a release.
+
+### Local execution evidence — 2026-11-26
+- Linux, Python 3.13.5, cryptography 46.0.4 (existing environment, not a fresh install).
+- Reconstructed the nine Python source/test files from commit df77b70964035eb27098601f4434d32766ddcb82 and checked each Git blob SHA. Added the CLI test whose blob SHA is 248ee1d61a99f41ab29dfb6f592432f04dd7ee04.
+- `python -m unittest discover -s tests -v`: 16 tests ran, all passed. Includes actual loopback HTTP requests, signature validation, SQLite persistence and encrypted-key CLI bundle round trip. Passphrase input alone is mocked in the CLI test.
+- Still required: clean installation on supported Python versions, GitHub Actions results, dependency and licensing review, actual browser compatibility and operational review. No public deployment yet.
