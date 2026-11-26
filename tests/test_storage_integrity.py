@@ -39,3 +39,32 @@ class StorageIntegrityTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "database integrity"):
             self.store.ingest([new])
         self.assertEqual(self.store.db.execute("SELECT COUNT(*) FROM records").fetchone()[0], 1)
+
+    def test_reject_noncanonical_stored_envelope(self):
+        self.store.db.execute("UPDATE records SET envelope=?", (json.dumps(self.item),))
+        with self.assertRaisesRegex(ValueError, "database integrity"):
+            self.store.export()
+
+    def test_reject_oversized_signed_stored_record(self):
+        from openhumanity import canonical
+        item = sign(create("x" * 66000, ["source"]), Ed25519PrivateKey.generate())
+        self.store.db.execute("INSERT INTO records VALUES (?, ?, ?)", (item["record"]["id"], item["public_key"], canonical(item).decode("utf-8")))
+        with self.assertRaisesRegex(ValueError, "database integrity"):
+            self.store.export()
+
+    @unittest.skipUnless(__import__('os').name == 'posix', 'POSIX mode bits')
+    def test_new_database_private_permissions(self):
+        import os
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'private.sqlite'
+            old = os.umask(0)
+            try:
+                Store(path).close()
+                self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+                path.chmod(0o640)
+                Store(path).close()
+                self.assertEqual(path.stat().st_mode & 0o777, 0o640)
+            finally:
+                os.umask(old)
