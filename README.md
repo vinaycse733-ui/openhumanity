@@ -121,6 +121,10 @@ quotation = check_excerpt(source_bytes, excerpt, expected_sha256)
 
 The SDK verifies signed records and recomputes evidence counts. Source bytes and any expected digest must be independently obtained by the caller. A quotation match does not prove source authenticity or factual accuracy. Use the optional `--snapshot source.txt` argument on the evidence command to sign a source fingerprint after an exact quotation check. Supply exactly one `--source`. `trust_sdk.verify_snapshot(envelope, source_bytes)` verifies the signed binding. Source bytes remain outside the database and must be retained separately. Neither the CLI nor SDK establishes that those bytes came from the claimed source URL.
 
+## Optional publisher authentication
+
+For cooperating publishers, `source_auth.attest` signs exact source bytes and an HTTPS source identifier. An application with an independently acquired publisher public key can use `source_auth.verify_published_evidence(envelope, source_bytes, attestation, expected_source, pinned_key)` to verify both the contributor's evidence and the publisher's detached signature. No automatic key discovery, URL retrieval or factual adjudication is performed. See TRUST_PROTOCOL.md.
+
 ## Roadmap
 1. Source snapshot verification and transparent citation provenance
 2. Evidence authoring UI, developer SDK and model integrations
