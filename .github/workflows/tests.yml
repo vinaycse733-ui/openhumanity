@@ -25,3 +25,4 @@ jobs:
       - run: openhumanity-peer --help
       - run: openhumanity-trust --help
       - run: openhumanity-client --help
+      - run: openhumanity-ask --help
