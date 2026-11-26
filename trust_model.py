@@ -43,12 +43,14 @@ def ask_local(claim_id, question, model, node_port=8000, model_port=11434):
         raise ValueError("model response too large")
     try:
         outer = json.loads(raw)
-        if outer.get("done") is not True:
+        if outer.get("done") is not True or outer.get("done_reason") not in (None, "stop"):
             raise ValueError("incomplete model response")
         message = outer["message"]
-        if message.get("tool_calls"):
-            raise ValueError("model tool calls are not supported")
+        if message.get("role") != "assistant" or message.get("tool_calls"):
+            raise ValueError("unexpected model message or tool calls")
         answer = json.loads(message["content"])
+        if not isinstance(answer, dict) or set(answer) != {"answer", "citations"}:
+            raise ValueError("unexpected model answer fields")
         text, citations = answer["answer"], answer["citations"]
         if not isinstance(text, str) or not text.strip() or len(text) > 12000:
             raise ValueError("invalid model answer")
