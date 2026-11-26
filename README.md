@@ -64,6 +64,14 @@ Use `contradicts` or `context` for other evidence relationships. The report grou
 
 With the local browser node running, GET http://127.0.0.1:8000/v1/claims/CLAIM_ID/report returns the same report without caller trust preferences. Keep the API local. It is not a hosted AI service. See TRUST_PROTOCOL.md for the compatibility and security contract.
 
+## Browser evidence authoring
+
+Use Add evidence in the local browser interface, enter a claim's record ID, choose supports, contradicts or context, and enter the excerpt and sources. The node signs the evidence with the unlocked local key. These are v2 evidence records; use the CLI with --snapshot for v3 signed source-file fingerprints. The browser never retrieves source URLs.
+
+## Local AI application client
+
+With the browser node running, execute `openhumanity-client CLAIM_ID --port 8000` or call `trust_client.fetch_verified_report(claim_id, port=8000)` from a Python application. It connects only to IPv4 loopback, rejects redirects, bypasses environment proxies, bounds the response and independently verifies signed evidence. The application must choose the expected claim ID and treat report content as untrusted data. No model-provider invocation or automatic source retrieval is performed.
+
 ## Developer SDK
 
 ```python
