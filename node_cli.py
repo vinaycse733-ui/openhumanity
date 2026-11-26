@@ -38,7 +38,7 @@ def main():
         with os.fdopen(os.open(args.key, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "wb") as f:
             f.write(key)
         return
-    if args.command in ("doctor", "backup") and not Path(args.db).is_file():
+    if args.command in ("doctor", "backup", "search", "export") and not Path(args.db).is_file():
         p.error("database does not exist")
     store = Store(args.db)
     try:
@@ -60,7 +60,7 @@ def main():
             payload = json.dumps(records, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
             if len(records) > 1000 or len(payload) > 64 * 1024 * 1024:
                 raise ValueError("bundle exceeds v0.1 import limits")
-            with open(args.file, "xb") as f:
+            with os.fdopen(os.open(args.file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "wb") as f:
                 f.write(payload)
         elif args.command == "backup":
             destination = Path(args.file)
