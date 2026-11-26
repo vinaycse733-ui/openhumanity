@@ -12,7 +12,7 @@ from urllib.parse import parse_qs, urlsplit
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from node_store import Store, sign
-from openhumanity import create
+from openhumanity import create, create_evidence
 from trust import report
 
 def esc(value):
@@ -37,9 +37,10 @@ def handler(store, key, token):
                 body = record["body"]
                 label = "Evidence: " + esc(body["relation"]) + " for " + esc(body["target"]) if body["version"] in (2, 3) else '<a href="/v1/claims/' + esc(record["id"]) + '/report">Evidence report (JSON)</a>'
                 cards.append("<article><p>" + label + "</p><h3>" + esc(body["claim"]) + "</h3><p>" + "<br>".join(esc(s) for s in body["sources"]) + "</p><small>Record: " + esc(record["id"]) + "<br>Signer: " + esc(item["public_key"]) + "<br>Parent: " + esc(body["parent"] or "None") + "</small></article>")
-            markup = """<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>OpenHumanity | Signed node</title><style>body{font:16px/1.6 system-ui;max-width:850px;margin:32px auto;padding:0 20px;background:#f5f4ef;color:#202722}h1{font-size:42px;letter-spacing:-.05em}section,article{background:white;border:1px solid #ccd4cc;padding:20px;margin:16px 0;border-radius:10px;overflow-wrap:anywhere}label{display:block;font-weight:bold}input,textarea{box-sizing:border-box;width:100%;font:inherit;padding:10px;margin:5px 0 12px;border:1px solid #aeb8af;border-radius:5px}button{font:inherit;padding:9px 16px;background:#214c38;color:white;border:0;border-radius:5px}</style><h1>OpenHumanity</h1><p>Signed knowledge, stored on this device. Signatures identify keys, not truth or real-world identity.</p>"""
+            markup = """<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>OpenHumanity | Signed node</title><style>body{font:16px/1.6 system-ui;max-width:850px;margin:32px auto;padding:0 20px;background:#f5f4ef;color:#202722}h1{font-size:42px;letter-spacing:-.05em}section,article{background:white;border:1px solid #ccd4cc;padding:20px;margin:16px 0;border-radius:10px;overflow-wrap:anywhere}label{display:block;font-weight:bold}input,textarea,select{box-sizing:border-box;width:100%;font:inherit;padding:10px;margin:5px 0 12px;border:1px solid #aeb8af;border-radius:5px}button{font:inherit;padding:9px 16px;background:#214c38;color:white;border:0;border-radius:5px}</style><h1>OpenHumanity</h1><p>Signed knowledge, stored on this device. Signatures identify keys, not truth or real-world identity.</p>"""
             markup += "<p role='status'>" + esc(error) + "</p>"
             markup += '<section><h2>Publish locally</h2><form method="post" action="/add"><input type="hidden" name="token" value="' + esc(token) + '"><label for="claim">Claim</label><textarea id="claim" name="claim" maxlength="4000" required></textarea><label for="sources">Sources (one per line)</label><textarea id="sources" name="sources" maxlength="8000" required></textarea><label for="parent">Parent record ID (optional)</label><input id="parent" name="parent" maxlength="64"><button>Sign and save</button></form></section>'
+            markup += '<section><h2>Add evidence</h2><p>Relationships are contributor assertions, not verified facts. For signed source-file fingerprints, use the CLI.</p><form method="post" action="/evidence"><input type="hidden" name="token" value="' + esc(token) + '"><label for="target">Claim ID</label><input id="target" name="target" maxlength="64" required><label for="relation">Relationship</label><select id="relation" name="relation" required><option value="supports">Supports</option><option value="contradicts">Contradicts</option><option value="context">Context</option></select><label for="excerpt">Evidence excerpt</label><textarea id="excerpt" name="claim" maxlength="4000" required></textarea><label for="evidence-sources">Sources (one per line)</label><textarea id="evidence-sources" name="sources" maxlength="8000" required></textarea><button>Sign and save evidence</button></form></section>'
             markup += '<section><h2>Knowledge library</h2><form action="/" method="get"><label for="q">Search</label><input id="q" name="q" value="' + esc(query) + '" maxlength="200"><button>Search</button></form>' + ("".join(cards) or "<p>No matching records.</p>") + "</section></html>"
             raw = markup.encode("utf-8")
             self.send_response(code)
@@ -85,17 +86,22 @@ def handler(store, key, token):
             self.page(parse_qs(u.query).get("q", [""])[0][:200])
 
         def do_POST(self):
-            if not self.trusted_host() or self.headers.get("Origin") != "http://127.0.0.1:" + str(self.server.server_port):
+            if not self.trusted_host() or self.headers.get_all("Origin") != ["http://127.0.0.1:" + str(self.server.server_port)]:
                 self.send_error(403)
                 return
-            if self.path != "/add" or self.headers.get_content_type() != "application/x-www-form-urlencoded":
+            if self.path not in ("/add", "/evidence") or self.headers.get_content_type() != "application/x-www-form-urlencoded":
                 self.send_error(400)
                 return
             try:
-                size = int(self.headers.get("Content-Length", "0"))
+                lengths = self.headers.get_all("Content-Length")
+                if not lengths or len(lengths) != 1 or self.headers.get("Transfer-Encoding") is not None:
+                    raise ValueError("invalid framing")
+                size = int(lengths[0])
                 if not 0 < size <= 50000:
                     raise ValueError("invalid body length")
                 data = parse_qs(self.rfile.read(size).decode("utf-8"), keep_blank_values=True, max_num_fields=8)
+                if any(len(values) != 1 for values in data.values()):
+                    raise ValueError("duplicate fields")
                 field = lambda name: data.get(name, [""])[0]
                 if not secrets.compare_digest(field("token").encode("utf-8"), token.encode("utf-8")):
                     self.send_error(403)
@@ -103,14 +109,18 @@ def handler(store, key, token):
                 claim, sources = field("claim").strip(), field("sources")
                 if len(claim)>4000 or len(sources)>8000:
                     raise ValueError("record too large")
-                item = sign(create(claim, [s.strip() for s in sources.splitlines() if s.strip()], field("parent").strip() or None), key)
-                store.export()  # Fail closed if existing signed records are corrupted.
+                source_list = [s.strip() for s in sources.splitlines() if s.strip()]
+                if self.path == "/evidence":
+                    record = create_evidence(field("target").strip(), field("relation"), claim, source_list)
+                else:
+                    record = create(claim, source_list, field("parent").strip() or None)
+                item = sign(record, key)
                 store.ingest([item])
             except sqlite3.Error:
                 self.send_error(503, "Knowledge database unavailable")
                 return
             except (ValueError, UnicodeError):
-                self.page(error="Record rejected. Check the claim, sources and parent.", code=400)
+                self.page(error="Record rejected. Check the claim, sources, relationship and target or parent.", code=400)
                 return
             self.send_response(303)
             self.send_header("Location", "/")
