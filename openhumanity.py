@@ -18,11 +18,28 @@ def create(claim, sources, parent=None):
     body = {"version": 1, "claim": claim, "sources": list(sources), "parent": parent}
     return {"body": body, "id": digest(body)}
 
+RELATIONS = ("supports", "contradicts", "context")
+
+def create_evidence(target, relation, excerpt, sources):
+    if not isinstance(target, str) or len(target) != 64 or any(c not in "0123456789abcdef" for c in target):
+        raise ValueError("invalid evidence target")
+    if relation not in RELATIONS:
+        raise ValueError("invalid evidence relation")
+    body = create(excerpt, sources)["body"]
+    body.update(version=2, target=target, relation=relation)
+    return {"body": body, "id": digest(body)}
+
 def verify(record):
     try:
         body = record["body"]
-        if type(body["version"]) is not int or body["version"] != 1:
+        if type(body["version"]) is not int:
             return False
-        return canonical(create(body["claim"], body["sources"], body["parent"])) == canonical(record)
+        if body["version"] == 1:
+            expected = create(body["claim"], body["sources"], body["parent"])
+        elif body["version"] == 2:
+            expected = create_evidence(body["target"], body["relation"], body["claim"], body["sources"])
+        else:
+            return False
+        return canonical(expected) == canonical(record)
     except (KeyError, TypeError, ValueError, RecursionError):
         return False
