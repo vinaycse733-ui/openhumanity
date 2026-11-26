@@ -3,6 +3,7 @@ import json
 import os
 import sqlite3
 import re
+from pathlib import Path
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 from cryptography.hazmat.primitives import serialization
 from cryptography.exceptions import InvalidSignature
@@ -28,8 +29,22 @@ def authentic(envelope):
         return False
 
 class Store:
-    def __init__(self, path):
+    def __init__(self, path, *, read_only=False):
         filename = os.fspath(path)
+        if read_only:
+            uri = Path(os.fsdecode(filename)).absolute().as_uri() + "?mode=ro"
+            self.db = sqlite3.connect(uri, uri=True)
+            try:
+                kind = self.db.execute("SELECT type FROM sqlite_master WHERE name='records'").fetchall()
+                columns = self.db.execute("PRAGMA table_info(records)").fetchall()
+                expected = [(0, 'id', 'TEXT', 0, None, 1), (1, 'author', 'TEXT', 0, None, 2),
+                            (2, 'envelope', 'TEXT', 1, None, 0)]
+                if kind != [('table',)] or columns != expected:
+                    raise ValueError("database is not an initialized OpenHumanity store")
+            except BaseException:
+                self.db.close()
+                raise
+            return
         if filename not in ("", ":memory:", b"", b":memory:"):
             try:
                 fd = os.open(filename, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
