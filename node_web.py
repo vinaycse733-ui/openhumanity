@@ -16,6 +16,8 @@ def esc(value):
 
 def handler(store, key, token):
     class Handler(BaseHTTPRequestHandler):
+        timeout = 10
+
         def trusted_host(self):
             return self.headers.get("Host") == "127.0.0.1:" + str(self.server.server_port)
 
@@ -63,7 +65,7 @@ def handler(store, key, token):
                     raise ValueError("invalid body length")
                 data = parse_qs(self.rfile.read(size).decode("utf-8"), keep_blank_values=True, max_num_fields=8)
                 field = lambda name: data.get(name, [""])[0]
-                if not secrets.compare_digest(field("token"), token):
+                if not secrets.compare_digest(field("token").encode("utf-8"), token.encode("utf-8")):
                     self.send_error(403)
                     return
                 claim, sources = field("claim").strip(), field("sources")
