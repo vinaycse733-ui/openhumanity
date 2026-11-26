@@ -50,8 +50,12 @@ def main():
                 raise ValueError("bundle too large")
             store.ingest(json.loads(data))
         elif args.command == "export":
-            with open(args.file, "x", encoding="utf-8") as f:
-                json.dump(store.export(), f, ensure_ascii=False, indent=2)
+            records = store.export()
+            payload = json.dumps(records, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+            if len(records) > 1000 or len(payload) > 64 * 1024 * 1024:
+                raise ValueError("bundle exceeds v0.1 import limits")
+            with open(args.file, "xb") as f:
+                f.write(payload)
         else:
             print(json.dumps(store.search(args.query), ensure_ascii=False, indent=2))
     finally:
