@@ -4,7 +4,7 @@ import json
 import sqlite3
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlsplit
-from urllib.request import build_opener, HTTPRedirectHandler
+from urllib.request import build_opener, HTTPRedirectHandler, ProxyHandler
 from node_store import Store
 
 LIMIT = 8 * 1024 * 1024
@@ -19,7 +19,8 @@ def pull(store, url):
         raise ValueError("unexpected URL components")
     if not (u.scheme == "https" and u.hostname or u.scheme == "http" and u.hostname in ("127.0.0.1", "::1", "localhost")):
         raise ValueError("use HTTPS or loopback HTTP")
-    with build_opener(NoRedirect()).open(url.rstrip("/") + "/v1/bundle", timeout=15) as response:
+    opener = build_opener(NoRedirect(), ProxyHandler({})) if u.scheme == "http" else build_opener(NoRedirect())
+    with opener.open(url.rstrip("/") + "/v1/bundle", timeout=15) as response:
         raw = response.read(LIMIT + 1)
     if len(raw) > LIMIT:
         raise ValueError("bundle too large")
@@ -32,6 +33,13 @@ def handler(store):
         timeout = 10
 
         def do_GET(self):
+            port = self.server.server_port
+            if self.headers.get_all("Host") not in ([f"127.0.0.1:{port}"], [f"localhost:{port}"]):
+                self.send_error(403)
+                return
+            if self.headers.get("Origin") is not None or self.headers.get("Sec-Fetch-Site") is not None:
+                self.send_error(403)
+                return
             if self.path != "/v1/bundle":
                 self.send_error(404)
                 return
@@ -48,6 +56,7 @@ def handler(store):
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(raw)))
             self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
             self.end_headers()
             self.wfile.write(raw)
     return Handler
