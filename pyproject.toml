@@ -20,4 +20,4 @@ openhumanity-ask = "trust_model:main"
 openhumanity-model-smoke = "live_model_smoke:main"
 
 [tool.setuptools]
-py-modules = ["openhumanity", "node_store", "node_cli", "node_web", "peer", "trust", "trust_sdk", "trust_client", "trust_model", "ai_adapter", "live_model_smoke", "source_auth", "publisher_policy"]
+py-modules = ["openhumanity", "node_store", "node_cli", "node_web", "peer", "trust", "trust_sdk", "trust_client", "trust_model", "ai_adapter", "live_model_smoke", "source_auth", "publisher_policy", "publisher_report"]
