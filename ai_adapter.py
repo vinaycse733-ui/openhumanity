@@ -58,7 +58,8 @@ def summarize(verified, question, model, port=11434):
              for relation, group in verified["evidence"].items()}
     uncited = {relation: sorted({item["id"] for item in group if not item["cited_by_model"]})
                for relation, group in index.items()}
-    return {"claim_id": verified['claim_id'], "model": model, "model_summary": result['answer'],
+    return {**{k: verified[k] for k in ("publisher_verified_counts", "publisher_verification_scope") if k in verified},
+            "claim_id": verified['claim_id'], "model": model, "model_summary": result['answer'],
             "cited_evidence_ids": citations, "truth_status": "not_determined",
             "citation_check": "identifier_membership_only", "model_output_verified": False,
             "evidence_counts": verified['counts'], "evidence_index": index,
@@ -68,8 +69,16 @@ def summarize(verified, question, model, port=11434):
             "publisher_verification_scope": verified.get("publisher_verification_scope")}
 
 
-def main():
+def summarize_claim(claim_id, question, model, node_port=8000, model_port=11434, *,
+                    publisher_policy=None, publisher_proofs=None):
+    """Retrieve and independently verify a claim before invoking the local model."""
     from trust_client import fetch_verified_report
+    verified = fetch_verified_report(claim_id, node_port, publisher_policy=publisher_policy,
+                                     publisher_proofs=publisher_proofs)
+    return summarize(verified, question, model, model_port)
+
+
+def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('claim_id')
     parser.add_argument('question')
