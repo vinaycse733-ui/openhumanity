@@ -16,4 +16,4 @@ openhumanity-peer = "peer:main"
 openhumanity-trust = "trust:main"
 
 [tool.setuptools]
-py-modules = ["openhumanity", "node_store", "node_cli", "node_web", "peer", "trust"]
+py-modules = ["openhumanity", "node_store", "node_cli", "node_web", "peer", "trust", "trust_sdk"]
