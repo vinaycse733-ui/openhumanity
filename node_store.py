@@ -15,7 +15,7 @@ def sign(record, key):
 
 def authentic(envelope):
     try:
-        if set(envelope) != {"record", "public_key", "signature"}:
+        if not isinstance(envelope, dict) or set(envelope) != {"record", "public_key", "signature"}:
             return False
         if not verify(envelope["record"]):
             return False
@@ -23,7 +23,7 @@ def authentic(envelope):
             return False
         Ed25519PublicKey.from_public_bytes(bytes.fromhex(envelope["public_key"])).verify(bytes.fromhex(envelope["signature"]), canonical(envelope["record"]))
         return True
-    except (InvalidSignature, ValueError, TypeError, KeyError, AttributeError, OverflowError):
+    except (InvalidSignature, ValueError, TypeError, KeyError, AttributeError, OverflowError, RecursionError):
         return False
 
 class Store:
@@ -39,7 +39,9 @@ class Store:
             if not authentic(item) or len(canonical(item)) > 65536:
                 raise ValueError("invalid signed record")
         with self.db:
-            ids = {row[0] for row in self.db.execute("SELECT DISTINCT id FROM records")}
+            if not self.db.in_transaction:
+                self.db.execute("BEGIN IMMEDIATE")
+            ids = {item["record"]["id"] for item in self.export()}
             ids.update(item["record"]["id"] for item in bundle)
             for item in bundle:
                 parent = item["record"]["body"]["parent"]
@@ -56,6 +58,9 @@ class Store:
             except (ValueError, TypeError, RecursionError) as exc:
                 raise ValueError("database integrity check failed") from exc
             records.append(item)
+        ids = {item["record"]["id"] for item in records}
+        if any(item["record"]["body"]["parent"] is not None and item["record"]["body"]["parent"] not in ids for item in records):
+            raise ValueError("database integrity check failed: missing revision parent")
         return records
     def search(self, query):
         return [item for item in self.export() if query.casefold() in json.dumps(item["record"]["body"], ensure_ascii=False).casefold()]
