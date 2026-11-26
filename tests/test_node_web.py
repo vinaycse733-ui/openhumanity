@@ -126,3 +126,12 @@ class WebTests(unittest.TestCase):
         self.assertIn("/v1/claims/" + claim_id + "/report", body)
         self.assertEqual(self.request("GET", "/claims/" + "0"*64)[0], 404)
         self.assertEqual(self.request("GET", "/claims/" + claim_id, headers={"Origin": "https://example.org"})[0], 403)
+
+    def test_read_routes_reject_foreign_origin_and_same_site(self):
+        self.assertEqual(self.add()[0], 303)
+        claim_id = create("<script>alert(1)</script>", ["https://example.org"])["id"]
+        for path in ("/", "/claims/" + claim_id, "/v1/claims/" + claim_id + "/report"):
+            for headers in ({"Origin": "https://example.org"}, {"Sec-Fetch-Site": "cross-site"}, {"Sec-Fetch-Site": "same-site"}):
+                with self.subTest(path=path, headers=headers):
+                    self.assertEqual(self.request("GET", path, headers=headers)[0], 403)
+            self.assertEqual(self.request("GET", path, headers={"Sec-Fetch-Site": "same-origin"})[0], 200)
