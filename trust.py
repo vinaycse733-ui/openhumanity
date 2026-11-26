@@ -58,7 +58,7 @@ def main():
     args = parser.parse_args()
     if not Path(args.db).is_file():
         parser.error("database does not exist")
-    store = Store(args.db)
+    store = Store(args.db, read_only=args.command == "report")
     try:
         if args.command == "evidence":
             key = serialization.load_pem_private_key(Path(args.key).read_bytes(), password=getpass.getpass("Key passphrase: ").encode())
