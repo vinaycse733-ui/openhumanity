@@ -71,6 +71,7 @@ def handler(store, key, token):
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("Referrer-Policy", "no-referrer")
+            self.send_header("Cross-Origin-Resource-Policy", "same-origin")
             self.send_header("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'")
             self.end_headers()
             self.wfile.write(raw)
@@ -79,14 +80,16 @@ def handler(store, key, token):
             if not self.trusted_host():
                 self.send_error(403)
                 return
+            origins = self.headers.get_all("Origin")
+            fetch_sites = self.headers.get_all("Sec-Fetch-Site")
+            if origins not in (None, ["http://127.0.0.1:" + str(self.server.server_port)]) or (fetch_sites is not None and fetch_sites not in (["same-origin"], ["none"])):
+                self.send_error(403)
+                return
             u = urlsplit(self.path)
             json_match = re.fullmatch(r"/v1/claims/([0-9a-f]{64})/report", u.path)
             html_match = re.fullmatch(r"/claims/([0-9a-f]{64})", u.path)
             match = json_match or html_match
             if match:
-                if self.headers.get("Origin") not in (None, "http://127.0.0.1:" + str(self.server.server_port)) or self.headers.get("Sec-Fetch-Site") == "cross-site":
-                    self.send_error(403)
-                    return
                 try:
                     result = report(store, match.group(1))
                     raw = (evidence_page(result) if html_match else json.dumps(result, ensure_ascii=False)).encode("utf-8")
