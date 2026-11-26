@@ -68,7 +68,8 @@ def ask_local(claim_id, question, model, node_port=8000, model_port=11434, *, po
                       for relation in RELATIONS}
     uncited = {relation: sorted({item["id"] for item in evidence_index[relation]
                                 if not item["cited_by_model"]}) for relation in RELATIONS}
-    return {"claim_id": claim_id, "model": model, "answer": text,
+    return {**{k: verified[k] for k in ("publisher_verified_counts", "publisher_verification_scope") if k in verified},
+            "claim_id": claim_id, "model": model, "answer": text,
             "citations": list(dict.fromkeys(citations)), "evidence_counts": verified["counts"],
             "evidence_index": evidence_index, "uncited_evidence_ids": uncited,
             "conflicting_evidence_present": bool(verified["counts"]["supports"] and verified["counts"]["contradicts"]),
