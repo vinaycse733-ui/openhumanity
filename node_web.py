@@ -130,9 +130,16 @@ def handler(store, key, token):
                 size = int(lengths[0])
                 if not 0 < size <= 50000:
                     raise ValueError("invalid body length")
-                data = parse_qs(self.rfile.read(size).decode("utf-8"), keep_blank_values=True, max_num_fields=8)
-                if any(len(values) != 1 for values in data.values()):
-                    raise ValueError("duplicate fields")
+                raw = self.rfile.read(size)
+                if len(raw) != size:
+                    raise ValueError("truncated request body")
+                encoded = raw.decode("utf-8", errors="strict")
+                if re.search(r"%(?![0-9A-Fa-f]{2})", encoded):
+                    raise ValueError("malformed percent encoding")
+                data = parse_qs(encoded, keep_blank_values=True, strict_parsing=True, errors="strict", max_num_fields=8)
+                allowed = {"token", "claim", "sources"} | ({"target", "relation"} if self.path == "/evidence" else {"parent"})
+                if not set(data).issubset(allowed) or any(len(values) != 1 for values in data.values()):
+                    raise ValueError("unexpected or duplicate fields")
                 field = lambda name: data.get(name, [""])[0]
                 if not secrets.compare_digest(field("token").encode("utf-8"), token.encode("utf-8")):
                     self.send_error(403)
