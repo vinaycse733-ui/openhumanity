@@ -30,3 +30,4 @@ class CliTests(unittest.TestCase):
             self.assertEqual(len(records), 1)
             self.assertEqual(records[0]["record"]["id"], record_id)
             self.assertTrue(authentic(records[0]))
+            self.assertEqual(json.loads(run("--db", second, "doctor")), {"status": "ok", "verified_records": 1})
