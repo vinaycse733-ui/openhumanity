@@ -1,4 +1,4 @@
-"""Minimal portable knowledge record protocol, version 1."""
+"""Minimal portable knowledge record protocol, versions 1–3."""
 import hashlib
 import json
 
@@ -29,6 +29,13 @@ def create_evidence(target, relation, excerpt, sources):
     body.update(version=2, target=target, relation=relation)
     return {"body": body, "id": digest(body)}
 
+def create_snapshot_evidence(target, relation, excerpt, source, snapshot_sha256):
+    if not isinstance(snapshot_sha256, str) or len(snapshot_sha256) != 64 or any(c not in "0123456789abcdef" for c in snapshot_sha256):
+        raise ValueError("invalid snapshot digest")
+    body = create_evidence(target, relation, excerpt, [source])["body"]
+    body.update(version=3, snapshot_sha256=snapshot_sha256)
+    return {"body": body, "id": digest(body)}
+
 def verify(record):
     try:
         body = record["body"]
@@ -38,8 +45,10 @@ def verify(record):
             expected = create(body["claim"], body["sources"], body["parent"])
         elif body["version"] == 2:
             expected = create_evidence(body["target"], body["relation"], body["claim"], body["sources"])
+        elif body["version"] == 3:
+            expected = create_snapshot_evidence(body["target"], body["relation"], body["claim"], body["sources"][0], body["snapshot_sha256"])
         else:
             return False
         return canonical(expected) == canonical(record)
-    except (KeyError, TypeError, ValueError, RecursionError):
+    except (KeyError, IndexError, TypeError, ValueError, RecursionError):
         return False
