@@ -94,6 +94,16 @@ The adapter fetches a verified report and submits its contents and your question
 
 The adapter rejects invalid citation identifiers, missing citations when evidence exists, incomplete responses and oversized requests. Both AI commands preserve an evidence_index, uncited_evidence_ids and conflicting_evidence_present independently of the generated answer; display these alongside the model summary. Citation membership does not establish that the model's prose follows the evidence. The generated text is unverified, vulnerable to prompt injection and not a truth verdict. Model-specific context limits may be smaller than the adapter's byte limit. Real model inference has not yet been tested; HTTP-contract tests use a test server, not a model.
 
+## Real model smoke check
+
+With an already-installed model and trusted local Ollama runtime running, execute:
+
+```sh
+openhumanity-model-smoke --model YOUR_LOCAL_MODEL
+```
+
+This creates a disposable in-memory node with fictional supporting and contradictory evidence, retrieves and independently verifies its report, and makes a real local model request. It does not use your database, install models or fetch URLs. A successful run checks response structure, citation identifiers and deterministic evidence coverage; it does not certify the model's factual accuracy or resistance to prompt injection. A missing runtime fails explicitly. Both model commands preserve uncited conflicting evidence separately from generated text.
+
 ## Developer SDK
 
 ```python
