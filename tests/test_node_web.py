@@ -109,3 +109,20 @@ class WebTests(unittest.TestCase):
         body = urlencode([("token","test-token"),("claim","first"),("claim","second"),("sources","source")])
         code, _ = self.request("POST", "/add", body, {"Content-Type":"application/x-www-form-urlencoded","Origin":self.origin})
         self.assertEqual(code, 400)
+
+    def test_evidence_review_page(self):
+        self.assertEqual(self.add()[0], 303)
+        self.assertEqual(self.evidence()[0], 303)
+        self.assertEqual(self.evidence("contradicts")[0], 303)
+        claim_id = create("<script>alert(1)</script>", ["https://example.org"])["id"]
+        code, body = self.request("GET", "/claims/" + claim_id)
+        self.assertEqual(code, 200)
+        self.assertIn("Conflicting evidence is present.", body)
+        self.assertIn("Supporting evidence", body)
+        self.assertIn("Contradictory evidence", body)
+        self.assertIn("&lt;b&gt;Evidence&lt;/b&gt;", body)
+        self.assertNotIn("<script>alert(1)</script>", body)
+        self.assertIn("Publisher proofs have not been checked", body)
+        self.assertIn("/v1/claims/" + claim_id + "/report", body)
+        self.assertEqual(self.request("GET", "/claims/" + "0"*64)[0], 404)
+        self.assertEqual(self.request("GET", "/claims/" + claim_id, headers={"Origin": "https://example.org"})[0], 403)
