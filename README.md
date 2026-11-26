@@ -64,6 +64,19 @@ Use `contradicts` or `context` for other evidence relationships. The report grou
 
 With the local browser node running, GET http://127.0.0.1:8000/v1/claims/CLAIM_ID/report returns the same report without caller trust preferences. Keep the API local. It is not a hosted AI service. See TRUST_PROTOCOL.md for the compatibility and security contract.
 
+## Developer SDK
+
+```python
+from trust_sdk import verify_report, check_excerpt
+
+# payload: a parsed report received from a node.
+# expected_claim_id: the identifier requested by your application.
+verified = verify_report(payload, expected_claim_id)
+quotation = check_excerpt(source_bytes, excerpt, expected_sha256)
+```
+
+The SDK verifies signed records and recomputes evidence counts. Source bytes and any expected digest must be independently obtained by the caller. A quotation match does not prove source authenticity or factual accuracy. Snapshot hashes are not yet embedded in signed evidence.
+
 ## Roadmap
 1. Source snapshot verification and transparent citation provenance
 2. Evidence authoring UI, developer SDK and model integrations
