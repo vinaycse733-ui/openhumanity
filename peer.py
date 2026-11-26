@@ -3,6 +3,7 @@ import argparse
 import json
 import re
 import sqlite3
+from pathlib import Path
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlsplit
 from urllib.request import build_opener, HTTPRedirectHandler, ProxyHandler
@@ -83,7 +84,10 @@ def main():
     fetch = commands.add_parser("pull")
     fetch.add_argument("url")
     args = p.parse_args()
-    store = Store(args.db)
+    read_only = args.command == "serve"
+    if read_only and not Path(args.db).is_file():
+        p.error("database does not exist")
+    store = Store(args.db, read_only=read_only)
     try:
         if args.command == "serve":
             with HTTPServer(("127.0.0.1", args.port), handler(store)) as server:
