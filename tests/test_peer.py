@@ -32,3 +32,24 @@ class PeerTests(unittest.TestCase):
         finally:
             target.close()
             t.join(6)
+
+    def test_serve_requires_initialized_database(self):
+        import contextlib
+        import io
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+        from peer import main
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'missing.sqlite'
+            with patch('sys.argv', ['peer.py', '--db', str(path), 'serve']), patch('peer.HTTPServer') as server, contextlib.redirect_stderr(io.StringIO()), contextlib.redirect_stdout(io.StringIO()):
+                with self.assertRaises(SystemExit):
+                    main()
+                server.assert_not_called()
+                self.assertFalse(path.exists())
+            path.touch()
+            with patch('sys.argv', ['peer.py', '--db', str(path), 'serve']), patch('peer.HTTPServer') as server, contextlib.redirect_stderr(io.StringIO()), contextlib.redirect_stdout(io.StringIO()):
+                with self.assertRaises((ValueError, SystemExit)):
+                    main()
+                server.assert_not_called()
+                self.assertEqual(path.read_bytes(), b'')
