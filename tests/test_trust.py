@@ -69,3 +69,18 @@ class TrustTests(unittest.TestCase):
             self.assertTrue(authentic(entry["envelope"]))
             self.assertEqual(entry["envelope"]["record"]["body"]["relation"], relation)
             self.assertEqual(entry["envelope"]["record"]["body"]["target"], self.id)
+
+    def test_report_does_not_initialize_empty_database(self):
+        import contextlib
+        import io
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+        from trust import main
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'empty.sqlite'
+            path.touch()
+            with patch('sys.argv', ['trust.py', '--db', str(path), 'report', self.id]), contextlib.redirect_stderr(io.StringIO()), contextlib.redirect_stdout(io.StringIO()):
+                with self.assertRaises((ValueError, SystemExit)):
+                    main()
+            self.assertEqual(path.read_bytes(), b'')
