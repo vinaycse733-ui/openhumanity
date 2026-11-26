@@ -4,10 +4,15 @@ Goal: a local-first, installable knowledge commons prototype, with manually conf
 
 - [x] Content-addressed records, signing, SQLite and explicit bundle exchange implemented.
 - [x] Loopback peer server and explicit pulls implemented.
-- [ ] Integrate a browser with signed node storage and protected write actions.
+- [x] Implement signed browser integration and protected write actions (verification pending).
 - [ ] Verify protocol, node, peer and browser tests on clean installations.
 - [ ] Resolve size limits, error handling and key management issues found during testing.
-- [ ] Document threat model, backup/recovery, sharing boundaries, trust and installation.
+- [x] Document threat model, backup/recovery, sharing boundaries, trust and installation (README.md and SECURITY.md).
 - [ ] Confirm reproducible release instructions and review licensing before public release.
 
 Do not mark verification complete without actual execution evidence. Keep repository private; never deploy or spend money without separate authorization. Manual replication is sufficient for v0.1; discovery, moderation, scalable sync and multilingual UI are later releases.
+
+## Verification log
+- Browser request and publishing integration tests exist, including invalid token and host rejection.
+- CI combined commit status returned no statuses; this is not evidence of passing tests.
+- Next: run the entire suite on a clean Python installation, verify signing and peer exchange end-to-end, and address failures before tagging a release.
