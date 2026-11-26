@@ -74,3 +74,38 @@ class WebTests(unittest.TestCase):
         self.assertTrue(authentic(result["claim_envelopes"][0]))
         self.assertEqual(self.request("GET", path, headers={"Origin":"https://example.org"})[0], 403)
         self.assertEqual(self.request("GET", "/v1/claims/" + "0"*64 + "/report")[0], 404)
+
+    def evidence(self, relation="supports", token="test-token", target=None, origin=None):
+        claim_id = create("<script>alert(1)</script>", ["https://example.org"])["id"]
+        return self.request("POST", "/evidence", urlencode({"token":token,"claim":"<b>Evidence</b>","sources":"https://example.org","target":target or claim_id,"relation":relation}), {"Content-Type":"application/x-www-form-urlencoded","Origin":origin or self.origin})
+
+    def test_evidence_submission_and_report(self):
+        self.assertEqual(self.add()[0], 303)
+        self.assertEqual(self.evidence()[0], 303)
+        self.assertEqual(self.evidence("contradicts")[0], 303)
+        claim_id = create("<script>alert(1)</script>", ["https://example.org"])["id"]
+        code, body = self.request("GET", "/v1/claims/" + claim_id + "/report")
+        self.assertEqual(code, 200)
+        result = json.loads(body)
+        self.assertEqual(result["counts"], {"supports":1,"contradicts":1,"context":0})
+        self.assertTrue(authentic(result["evidence"]["supports"][0]["envelope"]))
+        page = self.request("GET", "/")[1]
+        self.assertIn("Add evidence", page)
+        self.assertIn("&lt;b&gt;Evidence&lt;/b&gt;", page)
+        self.assertNotIn("<b>Evidence</b>", page)
+
+    def test_evidence_rejects_invalid_input(self):
+        self.assertEqual(self.evidence()[0], 400)
+        self.assertEqual(self.add()[0], 303)
+        self.assertEqual(self.evidence("unknown")[0], 400)
+        self.assertEqual(self.evidence(target="0"*64)[0], 400)
+        self.assertEqual(self.evidence(token="wrong")[0], 403)
+        self.assertEqual(self.evidence(origin="https://example.org")[0], 403)
+        claim_id = create("<script>alert(1)</script>", ["https://example.org"])["id"]
+        result = json.loads(self.request("GET", "/v1/claims/" + claim_id + "/report")[1])
+        self.assertEqual(sum(result["counts"].values()), 0)
+
+    def test_duplicate_form_fields_rejected(self):
+        body = urlencode([("token","test-token"),("claim","first"),("claim","second"),("sources","source")])
+        code, _ = self.request("POST", "/add", body, {"Content-Type":"application/x-www-form-urlencoded","Origin":self.origin})
+        self.assertEqual(code, 400)
