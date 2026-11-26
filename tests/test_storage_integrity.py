@@ -68,3 +68,22 @@ class StorageIntegrityTests(unittest.TestCase):
                 self.assertEqual(path.stat().st_mode & 0o777, 0o640)
             finally:
                 os.umask(old)
+
+    def test_read_only_store_prevents_mutation(self):
+        import sqlite3
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'node #%.sqlite'
+            store = Store(path)
+            try:
+                store.ingest([self.item])
+            finally:
+                store.close()
+            reader = Store(path, read_only=True)
+            try:
+                self.assertEqual(reader.export(), [self.item])
+                with self.assertRaises(sqlite3.OperationalError):
+                    reader.ingest([self.item])
+            finally:
+                reader.close()
