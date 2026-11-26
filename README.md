@@ -92,7 +92,7 @@ openhumanity-ai CLAIM_ID "What evidence supports or contradicts this claim?" --m
 
 The adapter fetches a verified report and submits its contents and your question to the configured loopback Ollama endpoint. It does not install models, use tools, fetch source URLs or follow HTTP redirects. Only use a runtime and model you have independently configured for local inference; the adapter cannot guarantee the runtime will not forward data to a cloud provider. The model receives claim and evidence text, so only submit data you are authorized to share with that runtime.
 
-The adapter rejects invalid citation identifiers, incomplete responses and oversized requests. Citation membership does not establish that the model's prose follows the evidence. The generated text is unverified, vulnerable to prompt injection and not a truth verdict. Model-specific context limits may be smaller than the adapter's byte limit. Real model inference has not yet been tested; HTTP-contract tests use a test server, not a model.
+The adapter rejects invalid citation identifiers, missing citations when evidence exists, incomplete responses and oversized requests. Both AI commands preserve an evidence_index, uncited_evidence_ids and conflicting_evidence_present independently of the generated answer; display these alongside the model summary. Citation membership does not establish that the model's prose follows the evidence. The generated text is unverified, vulnerable to prompt injection and not a truth verdict. Model-specific context limits may be smaller than the adapter's byte limit. Real model inference has not yet been tested; HTTP-contract tests use a test server, not a model.
 
 ## Developer SDK
 
