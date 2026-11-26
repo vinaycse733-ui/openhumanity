@@ -21,6 +21,8 @@ def create(claim, sources, parent=None):
 def verify(record):
     try:
         body = record["body"]
-        return create(body["claim"], body["sources"], body["parent"]) == record
-    except (KeyError, TypeError, ValueError):
+        if type(body["version"]) is not int or body["version"] != 1:
+            return False
+        return canonical(create(body["claim"], body["sources"], body["parent"])) == canonical(record)
+    except (KeyError, TypeError, ValueError, RecursionError):
         return False
