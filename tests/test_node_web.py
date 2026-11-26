@@ -135,3 +135,25 @@ class WebTests(unittest.TestCase):
                 with self.subTest(path=path, headers=headers):
                     self.assertEqual(self.request("GET", path, headers=headers)[0], 403)
             self.assertEqual(self.request("GET", path, headers={"Sec-Fetch-Site": "same-origin"})[0], 200)
+
+    def test_truncated_write_rejected(self):
+        import socket
+        body = b'token=test-token&claim=partial&sources=source'
+        with socket.create_connection(('127.0.0.1', self.port), timeout=5) as connection:
+            headers = (f'POST /add HTTP/1.1\r\nHost: 127.0.0.1:{self.port}\r\nOrigin: {self.origin}\r\n'
+                       f'Content-Type: application/x-www-form-urlencoded\r\nContent-Length: {len(body)+10}\r\n\r\n')
+            connection.sendall(headers.encode('ascii') + body)
+            connection.shutdown(socket.SHUT_WR)
+            with connection.makefile('rb') as reply:
+                status = reply.readline()
+        self.assertIn(b' 400 ', status)
+        self.assertIn('No matching records.', self.request('GET', '/')[1])
+
+    def test_malformed_form_encoding_rejected(self):
+        headers = {'Content-Type': 'application/x-www-form-urlencoded', 'Origin': self.origin}
+        for body in ('token=test-token&claim=%FF&sources=source',
+                     'token=test-token&claim=%ZZ&sources=source',
+                     'token=test-token&claim=valid&sources=source&unexpected=x'):
+            with self.subTest(body=body):
+                self.assertEqual(self.request('POST', '/add', body, headers)[0], 400)
+        self.assertIn('No matching records.', self.request('GET', '/')[1])
