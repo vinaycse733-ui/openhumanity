@@ -15,6 +15,7 @@ openhumanity-web = "node_web:main"
 openhumanity-peer = "peer:main"
 openhumanity-trust = "trust:main"
 openhumanity-client = "trust_client:main"
+openhumanity-ai = "ai_adapter:main"
 openhumanity-ask = "trust_model:main"
 
 [tool.setuptools]
