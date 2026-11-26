@@ -44,7 +44,7 @@ In another:
 ```sh
 python peer.py --db second.sqlite pull http://127.0.0.1:8765
 ```
-Remote pulls require HTTPS. Serving remotely requires a separately configured TLS reverse proxy and access controls. The server exports the entire selected database, has no authentication, and is not suitable for direct internet exposure. Exchange is manual and limited to 1000 records and 8 MiB per network bundle. CLI file export/import is limited to 1000 records and 64 MiB; larger databases require a future paginated exchange implementation. No automatic discovery or pagination yet. The dedicated node_web.py browser UI uses signed node storage. The older index.html is separate.
+Remote pulls require HTTPS. Serving remotely requires a separately configured TLS reverse proxy and access controls. The local peer endpoint only accepts a single loopback Host header with the listening port and rejects browser-origin requests. An independently secured reverse proxy would need to rewrite Host to that loopback value; remote proxy operation is not tested. Local HTTP pulls bypass environment proxies. The server exports the entire selected database, has no authentication, and is not suitable for direct internet exposure. Exchange is manual and limited to 1000 records and 8 MiB per network bundle. CLI file export/import is limited to 1000 records and 64 MiB; larger databases require a future paginated exchange implementation. No automatic discovery or pagination yet. The dedicated node_web.py browser UI uses signed node storage. The older index.html is separate.
 
 ## Roadmap
 1. Test and harden signed node and replication
