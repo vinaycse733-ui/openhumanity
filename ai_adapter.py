@@ -50,10 +50,20 @@ def summarize(verified, question, model, port=11434):
     citations = result['citations']
     if any(not isinstance(c, str) or c not in ids for c in citations) or len(set(citations)) != len(citations):
         raise ValueError("unknown or duplicate model citation")
+    if ids and not citations:
+        raise ValueError("model omitted evidence citations")
+    cited = set(citations)
+    evidence_index = {relation: [dict(item, cited_by_model=item["id"] in cited)
+                                 for item in group]
+                      for relation, group in verified["evidence"].items()}
+    uncited = {relation: sorted({item["id"] for item in group if not item["cited_by_model"]})
+               for relation, group in evidence_index.items()}
     return {"claim_id": verified['claim_id'], "model": model, "model_summary": result['answer'],
             "cited_evidence_ids": citations, "truth_status": "not_determined",
             "citation_check": "identifier_membership_only", "model_output_verified": False,
-            "evidence_counts": verified['counts']}
+            "evidence_counts": verified['counts'], "evidence_index": evidence_index,
+            "uncited_evidence_ids": uncited,
+            "conflicting_evidence_present": bool(verified['counts']['supports'] and verified['counts']['contradicts'])}
 
 
 def main():
