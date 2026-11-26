@@ -104,6 +104,10 @@ openhumanity-model-smoke --model YOUR_LOCAL_MODEL
 
 This creates a disposable in-memory node with fictional supporting and contradictory evidence, retrieves and independently verifies its report, and makes a real local model request. It does not use your database, install models or fetch URLs. A successful run checks response structure, citation identifiers and deterministic evidence coverage; it does not certify the model's factual accuracy or resistance to prompt injection. A missing runtime fails explicitly. Both model commands preserve uncited conflicting evidence separately from generated text.
 
+## Real inference smoke check
+
+With a trusted Ollama runtime already running locally and a model already installed, run `openhumanity-model-smoke --model YOUR_LOCAL_MODEL`. The command creates an isolated in-memory node with synthetic conflicting evidence; it does not access your knowledge database or download any model. A successful run demonstrates that the configured runtime returned a parseable response with valid citation identifiers, not factual accuracy or robust resistance to prompt injection. A controlled HTTP fixture exercises the workflow in automated tests; it is not real model inference.
+
 ## Developer SDK
 
 ```python
