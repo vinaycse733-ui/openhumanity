@@ -58,3 +58,14 @@ class TrustTests(unittest.TestCase):
     def test_missing_claim(self):
         with self.assertRaises(KeyError):
             report(self.store, "0" * 64)
+
+    def test_report_proofs_are_independently_verifiable(self):
+        from node_store import authentic
+        self.store.ingest([self.evidence("supports"), self.evidence("contradicts")])
+        result = report(self.store, self.id)
+        self.assertTrue(authentic(result["claim_envelopes"][0]))
+        for relation in ("supports", "contradicts"):
+            entry = result["evidence"][relation][0]
+            self.assertTrue(authentic(entry["envelope"]))
+            self.assertEqual(entry["envelope"]["record"]["body"]["relation"], relation)
+            self.assertEqual(entry["envelope"]["record"]["body"]["target"], self.id)
