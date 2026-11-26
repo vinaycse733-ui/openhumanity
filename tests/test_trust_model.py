@@ -35,10 +35,12 @@ class ModelTests(unittest.TestCase):
         owner = self
         self.reply = {'answer': 'One contributor supports the claim.', 'citations': [self.evidence]}
         self.done = True
+        self.reason = "stop"
+        self.role = "assistant"
         class Endpoint(BaseHTTPRequestHandler):
             def do_POST(self):
                 owner.received = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
-                raw = json.dumps({'done': owner.done, 'message': {'content': json.dumps(owner.reply)}}).encode()
+                raw = json.dumps({'done': owner.done, 'done_reason': owner.reason, 'message': {'role': owner.role, 'content': json.dumps(owner.reply)}}).encode()
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
                 self.send_header('Content-Length', str(len(raw)))
@@ -94,3 +96,18 @@ class ModelTests(unittest.TestCase):
         self.assertEqual(result['uncited_evidence_ids']['contradicts'], [])
         self.assertTrue(result['conflicting_evidence_present'])
         self.assertEqual(result['truth_status'], 'not_determined')
+
+    def test_truncated_response_rejected(self):
+        self.reason = "length"
+        with self.assertRaises(ValueError):
+            self.ask()
+
+    def test_wrong_role_rejected(self):
+        self.role = "user"
+        with self.assertRaises(ValueError):
+            self.ask()
+
+    def test_injected_verdict_field_rejected(self):
+        self.reply["truth_status"] = "true"
+        with self.assertRaises(ValueError):
+            self.ask()
