@@ -1,6 +1,7 @@
 """Opt-in replication over loopback HTTP or verified HTTPS."""
 import argparse
 import json
+import sqlite3
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlsplit
 from urllib.request import build_opener, HTTPRedirectHandler
@@ -28,11 +29,17 @@ def pull(store, url):
 
 def handler(store):
     class Handler(BaseHTTPRequestHandler):
+        timeout = 10
+
         def do_GET(self):
             if self.path != "/v1/bundle":
                 self.send_error(404)
                 return
-            bundle = store.export()
+            try:
+                bundle = store.export()
+            except (ValueError, sqlite3.Error):
+                self.send_error(503, "Knowledge database unavailable")
+                return
             raw = json.dumps(bundle, ensure_ascii=False).encode("utf-8")
             if len(bundle) > 1000 or len(raw) > LIMIT:
                 self.send_error(503, "bundle exceeds prototype limits")
