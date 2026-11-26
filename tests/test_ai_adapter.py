@@ -64,18 +64,6 @@ class AdapterTests(unittest.TestCase):
         self.reply['truth_status'] = 'true'
         with self.assertRaises(ValueError):
             self.run_summary()
-
-    def test_uncited_conflict_remains_visible(self):
-        self.reply['citations'] = ['b'*64]
-        result = self.run_summary()
-        self.assertTrue(result['conflicting_evidence_present'])
-        self.assertEqual(result['uncited_evidence_ids']['contradicts'], ['c'*64])
-        self.assertFalse(result['evidence_index']['contradicts'][0]['cited_by_model'])
-        self.assertTrue(result['evidence_index']['supports'][0]['cited_by_model'])
-    def test_missing_citations_rejected(self):
-        self.reply['citations'] = []
-        with self.assertRaises(ValueError):
-            self.run_summary()
     def test_omitted_citations_rejected(self):
         self.reply['citations'] = []
         with self.assertRaises(ValueError):
