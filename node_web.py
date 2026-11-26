@@ -3,6 +3,7 @@ import argparse
 import getpass
 import html
 import secrets
+import sqlite3
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
@@ -23,7 +24,12 @@ def handler(store, key, token):
 
         def page(self, query="", error="", code=200):
             cards = []
-            for item in store.search(query):
+            try:
+                items = store.search(query)
+            except (ValueError, sqlite3.Error):
+                self.send_error(503, "Knowledge database unavailable; restore a verified backup")
+                return
+            for item in items:
                 record = item["record"]
                 body = record["body"]
                 cards.append("<article><h3>" + esc(body["claim"]) + "</h3><p>" + "<br>".join(esc(s) for s in body["sources"]) + "</p><small>Record: " + esc(record["id"]) + "<br>Signer: " + esc(item["public_key"]) + "<br>Parent: " + esc(body["parent"] or "None") + "</small></article>")
@@ -72,7 +78,11 @@ def handler(store, key, token):
                 if len(claim)>4000 or len(sources)>8000:
                     raise ValueError("record too large")
                 item = sign(create(claim, [s.strip() for s in sources.splitlines() if s.strip()], field("parent").strip() or None), key)
+                store.export()  # Fail closed if existing signed records are corrupted.
                 store.ingest([item])
+            except sqlite3.Error:
+                self.send_error(503, "Knowledge database unavailable")
+                return
             except (ValueError, UnicodeError):
                 self.page(error="Record rejected. Check the claim, sources and parent.", code=400)
                 return
