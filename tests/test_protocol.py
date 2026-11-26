@@ -20,3 +20,19 @@ class ProtocolTests(unittest.TestCase):
         self.assertFalse(verify({}))
     def test_determinism(self):
         self.assertEqual(create("Claim", ["source"]), create("Claim", ["source"]))
+    def test_strict_version(self):
+        for version in (True, 1.0, "1", 2, None):
+            with self.subTest(version=version):
+                record = create("Claim", ["source"])
+                record["body"]["version"] = version
+                self.assertFalse(verify(record))
+    def test_extra_fields_rejected(self):
+        record = create("Claim", ["source"])
+        record["extra"] = True
+        self.assertFalse(verify(record))
+    def test_unicode_round_trip(self):
+        self.assertTrue(verify(create("తెలుగు ज्ञान café", ["日本語"])))
+    def test_unpaired_surrogate_rejected(self):
+        record = create("Claim", ["source"])
+        record["body"]["claim"] = "\ud800"
+        self.assertFalse(verify(record))
