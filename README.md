@@ -72,6 +72,16 @@ Use Add evidence in the local browser interface, enter a claim's record ID, choo
 
 With the browser node running, execute `openhumanity-client CLAIM_ID --port 8000` or call `trust_client.fetch_verified_report(claim_id, port=8000)` from a Python application. It connects only to IPv4 loopback, rejects redirects, bypasses environment proxies, bounds the response and independently verifies signed evidence. The application must choose the expected claim ID and treat report content as untrusted data. No model-provider invocation or automatic source retrieval is performed.
 
+## Optional local AI model integration
+
+If you already run Ollama on this computer with a downloaded local model, and the signed browser node is running, use:
+
+```sh
+openhumanity-ask CLAIM_ID "What does the evidence say?" --model YOUR_LOCAL_MODEL
+```
+
+The command retrieves and independently verifies the report, explicitly sends the report and question to the loopback Ollama-compatible /api/chat endpoint, and validates returned citation IDs against the supplied evidence. It requests JSON output with no tools, bounds input and response sizes, refuses redirects and bypasses environment proxies. It does not download or install models, or make cloud API calls itself. Use a genuinely local model and a trusted runtime configuration that does not forward data to the cloud. The model may still misinterpret evidence, follow malicious text, omit disagreement or produce unsupported claims. Citation IDs being valid does not establish entailment. Output is labeled model_generated_not_fact_checked. Real inference has not been tested yet; integration tests use a controlled HTTP response fixture, not a language model.
+
 ## Developer SDK
 
 ```python
