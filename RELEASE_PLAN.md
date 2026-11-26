@@ -49,3 +49,8 @@ Do not mark verification complete without actual execution evidence. Keep reposi
 ### Revision integrity and diagnostics
 - Imports validate existing signed records and revision dependencies inside a write transaction before adding new records. Missing revision parents now fail read verification. Added CLI `doctor` command for SQLite quick_check and signed graph validation.
 - Linux Python 3.13.5 / cryptography 46.0.4: ran 12 tests (storage, integrity and CLI) in this session, all passed. Git blob hashes of all six executed Python files matched fetched or returned repository hashes. Full suite and cross-platform checks still pending after these changes.
+
+### Backup and full regression
+- Added exclusive-file SQLite backup with post-copy SQLite and signed graph verification, cleanup on verification failure, and missing database rejection for diagnostics and backup.
+- Reassembled the full 13 Python source/test files from prior verified working copies. All Git blob hashes matched the latest committed Python files, including updated CLI and CLI test blobs `000290c13a04f9492afc70466ab721dbab552058` and `ebcade964a80457c988a2fa137414d73472a189c`.
+- Ran `python -m unittest discover -s tests -v` in the Linux environment with cryptography 46.0.4. All 32 tests passed after backup changes (including backup round trip and overwrite/missing-database rejection). Cross-platform CI, clean dependency resolution and real browser checks remain unverified.
