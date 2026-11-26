@@ -26,3 +26,4 @@ jobs:
       - run: openhumanity-trust --help
       - run: openhumanity-client --help
       - run: openhumanity-ask --help
+      - run: openhumanity-ai --help
