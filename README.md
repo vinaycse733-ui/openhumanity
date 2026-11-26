@@ -64,6 +64,10 @@ Use `contradicts` or `context` for other evidence relationships. The report grou
 
 With the local browser node running, GET http://127.0.0.1:8000/v1/claims/CLAIM_ID/report returns the same report without caller trust preferences. Keep the API local. It is not a hosted AI service. See TRUST_PROTOCOL.md for the compatibility and security contract.
 
+## Browser evidence review
+
+Select Review evidence on a claim to view supporting, contradictory and contextual evidence, distinct record counts and signed record details. The page does not check publisher proofs; use the client with a local publisher policy for that. All local read routes reject foreign Origin headers and browser requests marked cross-site or same-site rather than same-origin. Open the local address directly.
+
 ## Browser evidence authoring
 
 Use Add evidence in the local browser interface, enter a claim's record ID, choose supports, contradicts or context, and enter the excerpt and sources. The node signs the evidence with the unlocked local key. These are v2 evidence records; use the CLI with --snapshot for v3 signed source-file fingerprints. The browser never retrieves source URLs. Choose Review evidence on a claim to see supporting, contradictory and contextual records, source fingerprints and signature details. Publisher proofs are not checked in the browser view.
