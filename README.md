@@ -4,16 +4,16 @@ Knowledge belongs to everyone.
 
 An experimental knowledge commons with portable, source-backed claims and content-addressed revisions.
 
-## Run the signed browser application
+## Install and run v0.1.0rc1
 
 Python 3.11+ is required. Clone the repository and run:
 
 ```sh
 python -m venv .venv
 # Activate the virtual environment for your platform.
-python -m pip install -r requirements.txt
-python node_cli.py keygen identity.pem
-python node_web.py --key identity.pem --db node.sqlite
+python -m pip install .
+openhumanity keygen identity.pem
+openhumanity-web --key identity.pem --db node.sqlite
 ```
 
 Open http://127.0.0.1:8000 in a browser. The server listens only on loopback. Do not expose it through port forwarding or a public reverse proxy. Keep private keys and database files in a restricted local directory. Do not run a generic static file server from the repository root; it may expose those files. The older index.html is an unsigned browser-only experiment, not the signed node application.
@@ -44,7 +44,7 @@ In another:
 ```sh
 python peer.py --db second.sqlite pull http://127.0.0.1:8765
 ```
-Remote pulls require HTTPS. Serving remotely requires a separately configured TLS reverse proxy and access controls. The server exports the entire selected database, has no authentication, and is not suitable for direct internet exposure. Exchange is manual and limited to 1000 records and 8 MiB per network bundle. No automatic discovery or pagination yet. The dedicated node_web.py browser UI uses signed node storage. The older index.html is separate.
+Remote pulls require HTTPS. Serving remotely requires a separately configured TLS reverse proxy and access controls. The server exports the entire selected database, has no authentication, and is not suitable for direct internet exposure. Exchange is manual and limited to 1000 records and 8 MiB per network bundle. CLI file export/import is limited to 1000 records and 64 MiB; larger databases require a future paginated exchange implementation. No automatic discovery or pagination yet. The dedicated node_web.py browser UI uses signed node storage. The older index.html is separate.
 
 ## Roadmap
 1. Test and harden signed node and replication
