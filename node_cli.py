@@ -23,6 +23,7 @@ def main():
     for name in ("import", "export"):
         sub.add_parser(name).add_argument("file")
     sub.add_parser("search").add_argument("query")
+    sub.add_parser("doctor", help="Check SQLite and signed revision integrity")
     args = p.parse_args()
     if args.command == "keygen":
         password = getpass.getpass("New key passphrase: ").encode()
@@ -56,6 +57,12 @@ def main():
                 raise ValueError("bundle exceeds v0.1 import limits")
             with open(args.file, "xb") as f:
                 f.write(payload)
+        elif args.command == "doctor":
+            rows = store.db.execute("PRAGMA quick_check").fetchall()
+            if rows != [("ok",)]:
+                raise ValueError("SQLite integrity check failed")
+            records = store.export()
+            print(json.dumps({"status": "ok", "verified_records": len(records)}))
         else:
             print(json.dumps(store.search(args.query), ensure_ascii=False, indent=2))
     finally:
