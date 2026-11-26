@@ -4,6 +4,7 @@ import json
 import re
 from urllib.request import build_opener, HTTPRedirectHandler, ProxyHandler
 from trust_sdk import verify_report
+from publisher_report import verify_with_publishers, add_proof_arguments, load_proof_arguments
 
 MAX_REPORT_BYTES = 8 * 1024 * 1024
 
@@ -12,7 +13,7 @@ class NoRedirect(HTTPRedirectHandler):
         return None
 
 
-def fetch_verified_report(claim_id, port=8000, trusted_keys=()):
+def fetch_verified_report(claim_id, port=8000, trusted_keys=(), *, policy=None, proofs=None):
     """Read a local node report and rebuild it from signed records.
 
     No URL is accepted from a model or evidence record. No source is visited.
@@ -30,7 +31,12 @@ def fetch_verified_report(claim_id, port=8000, trusted_keys=()):
         raw = response.read(MAX_REPORT_BYTES + 1)
     if len(raw) > MAX_REPORT_BYTES:
         raise ValueError("report exceeds response limit")
-    return verify_report(json.loads(raw), claim_id, trusted_keys)
+    payload = json.loads(raw)
+    if policy is not None:
+        return verify_with_publishers(payload, claim_id, policy, proofs if proofs is not None else {}, trusted_keys)
+    if proofs is not None:
+        raise ValueError("publisher proofs require a trusted policy")
+    return verify_report(payload, claim_id, trusted_keys)
 
 
 def main():
@@ -38,9 +44,11 @@ def main():
     parser.add_argument("claim_id")
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--trusted-key", action="append", default=[])
+    add_proof_arguments(parser)
     args = parser.parse_args()
     try:
-        result = fetch_verified_report(args.claim_id, args.port, args.trusted_key)
+        policy, proofs = load_proof_arguments(args)
+        result = fetch_verified_report(args.claim_id, args.port, args.trusted_key, policy=policy, proofs=proofs)
     except (OSError, ValueError, RecursionError) as exc:
         parser.error(str(exc))
     print(json.dumps(result, ensure_ascii=False, indent=2))
