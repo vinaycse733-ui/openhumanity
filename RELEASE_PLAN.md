@@ -62,8 +62,8 @@ The scope now prioritizes model-independent evidence and provenance reports. Pre
 - [x] Python report function, CLI and local JSON report API with original signed envelopes for independent checks.
 - [x] Browser distinguishes evidence from claims and links to reports; existing peer and backup exchange supports evidence on updated nodes.
 - [x] Document protocol, limitations, compatibility and consumer guidance in TRUST_PROTOCOL.md.
-- [ ] Add evidence authoring UI and source snapshot/quotation provenance checks.
-- [ ] Add a report-verifying developer SDK and reference AI integration; treat supplied text as untrusted data.
+- [x] Add evidence authoring UI and signed source snapshot/quotation provenance checks (publisher proofs via CLI).
+- [x] Implement report-verifying developer SDK and local AI adapters; treat supplied text as untrusted data. Real inference remains a separate unverified gate.
 - [ ] Clean supported dependency installation, cross-platform CI and real browser checks; review licensing/security before any public release.
 
 ### Execution evidence
@@ -141,3 +141,7 @@ On Linux with Python 3.13.5 and cryptography 46.0.4, all 41 tests passed in the 
 - Added local HTML evidence review with grouped relationships, disagreement notice, escaped text, source fingerprints and keyboard-focus styles. Browser does not claim publisher verification.
 - Executed actual Linux tests: 113 passed after proof integration (7.859 s), 114 passed after review UI (6.700 s); built wheel without fresh dependency resolution, installed separately and reran 114 tests outside source directory (7.718 s). Verified changed code/test Git blob hashes match committed files. Installed ask CLI help exposes proof options. Model tests use fixtures, not actual inference. Real browser rendering and accessibility audit, cross-platform CI, fresh dependency installation and real publisher onboarding remain unverified. Ollama executable still unavailable.
 - Freeze expansion until release verification. Prioritize clean supported install, independently verified CI, permitted browser interaction and actual local model smoke test. Do not publish, spend money or claim production readiness without evidence.
+
+### Publisher-aware model integration and evidence review reconciliation
+- Inspected current main: both model adapters and local client already accept explicit publisher policy and proof files; an evidence review page groups supporting, contradictory and contextual evidence. Reconciled local working copies with latest fetched changed-file Git hashes, including the alternate adapter, browser page, publisher model tests and packaging. Re-ran 114 tests (8.419 s), then applied consistent origin/fetch-site restrictions to all local GET routes, including root; new regression exercises all three routes. Actual local Python 3.13.5 / cryptography 46.0.4 execution: 115 tests passed (6.038 s); built and installed wheel without dependency downloads and ran 115 tests outside source (8.279 s). All eight installed entry-point help checks succeeded. New tested hashes match GitHub blobs c10428d35eca34aac2608293f0b33c586d0f514b and 53b021ebfe7bf907527167ddf0ec484fa53ada56. Reused existing baseline for unchanged files, not a complete fresh clone. Model tests are HTTP fixtures, not actual inference.
+- Remaining release gates: actual local-model inference, cooperating publisher with independently obtained pins, real browser interaction, clean supported dependency resolution, cross-platform CI evidence, security/licensing review. No public release, spend or model download.
