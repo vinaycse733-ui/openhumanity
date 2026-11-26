@@ -47,6 +47,15 @@ class Store:
                     raise ValueError("missing parent")
                 self.db.execute("INSERT OR IGNORE INTO records VALUES (?, ?, ?)", (item["record"]["id"], item["public_key"], canonical(item).decode("utf-8")))
     def export(self):
-        return [json.loads(row[0]) for row in self.db.execute("SELECT envelope FROM records ORDER BY id, author")]
+        records = []
+        for record_id, author, raw in self.db.execute("SELECT id, author, envelope FROM records ORDER BY id, author"):
+            try:
+                item = json.loads(raw)
+                if not authentic(item) or item["record"]["id"] != record_id or item["public_key"] != author:
+                    raise ValueError("invalid stored record")
+            except (ValueError, TypeError, RecursionError) as exc:
+                raise ValueError("database integrity check failed") from exc
+            records.append(item)
+        return records
     def search(self, query):
         return [item for item in self.export() if query.casefold() in json.dumps(item["record"]["body"], ensure_ascii=False).casefold()]
