@@ -66,7 +66,7 @@ With the local browser node running, GET http://127.0.0.1:8000/v1/claims/CLAIM_I
 
 ## Browser evidence authoring
 
-Use Add evidence in the local browser interface, enter a claim's record ID, choose supports, contradicts or context, and enter the excerpt and sources. The node signs the evidence with the unlocked local key. These are v2 evidence records; use the CLI with --snapshot for v3 signed source-file fingerprints. The browser never retrieves source URLs.
+Use Add evidence in the local browser interface, enter a claim's record ID, choose supports, contradicts or context, and enter the excerpt and sources. The node signs the evidence with the unlocked local key. These are v2 evidence records; use the CLI with --snapshot for v3 signed source-file fingerprints. The browser never retrieves source URLs. Choose Review evidence on a claim to see supporting, contradictory and contextual records, source fingerprints and signature details. Publisher proofs are not checked in the browser view.
 
 ## Local AI application client
 
@@ -131,7 +131,7 @@ Load a trusted local JSON policy with `PublisherPolicy.load("policy.json")` from
 
 ## Publisher-enriched reports
 
-Applications can call `publisher_report.verify_with_publishers(payload, expected_claim_id, policy, proofs)` with a raw signed report, a caller-selected claim ID, a trusted local PublisherPolicy, and a mapping of evidence IDs to `(snapshot_bytes, attestation)` tuples. The result preserves every supplied evidence relationship and separately counts publisher-authenticated evidence. Missing proofs are labeled, invalid proofs are rejected, and truth remains undetermined. This is a developer SDK integration; the optional model adapters do not automatically obtain or verify publisher proofs yet.
+Applications can call `publisher_report.verify_with_publishers(payload, expected_claim_id, policy, proofs)` with a raw signed report, a caller-selected claim ID, a trusted local PublisherPolicy, and a mapping of evidence IDs to `(snapshot_bytes, attestation)` tuples. The result preserves every supplied evidence relationship and separately counts publisher-authenticated evidence. Missing proofs are labeled, invalid proofs are rejected, and truth remains undetermined. The verified client and both optional local model commands also support `--publisher-policy policy.json --publisher-proof EVIDENCE_ID snapshot.txt attestation.json` (repeat the proof option as needed). Only explicitly supplied local proofs are checked, before model context is sent. The commands never fetch snapshots or discover keys automatically.
 
 ## Roadmap
 1. Source snapshot verification and transparent citation provenance
