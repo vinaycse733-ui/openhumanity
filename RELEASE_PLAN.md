@@ -54,3 +54,17 @@ Do not mark verification complete without actual execution evidence. Keep reposi
 - Added exclusive-file SQLite backup with post-copy SQLite and signed graph verification, cleanup on verification failure, and missing database rejection for diagnostics and backup.
 - Reassembled the full 13 Python source/test files from prior verified working copies. All Git blob hashes matched the latest committed Python files, including updated CLI and CLI test blobs `000290c13a04f9492afc70466ab721dbab552058` and `ebcade964a80457c988a2fa137414d73472a189c`.
 - Ran `python -m unittest discover -s tests -v` in the Linux environment with cryptography 46.0.4. All 32 tests passed after backup changes (including backup round trip and overwrite/missing-database rejection). Cross-platform CI, clean dependency resolution and real browser checks remain unverified.
+
+## v0.2 development direction — AI evidence layer
+The scope now prioritizes model-independent evidence and provenance reports. Preserve existing v1 claim support; do not promise factual truth or completeness.
+
+- [x] Signed v2 evidence records with supporting, contradicting and contextual relationships; validate claim targets during ingest and reads.
+- [x] Python report function, CLI and local JSON report API with original signed envelopes for independent checks.
+- [x] Browser distinguishes evidence from claims and links to reports; existing peer and backup exchange supports evidence on updated nodes.
+- [x] Document protocol, limitations, compatibility and consumer guidance in TRUST_PROTOCOL.md.
+- [ ] Add evidence authoring UI and source snapshot/quotation provenance checks.
+- [ ] Add a report-verifying developer SDK and reference AI integration; treat supplied text as untrusted data.
+- [ ] Clean supported dependency installation, cross-platform CI and real browser checks; review licensing/security before any public release.
+
+### Execution evidence
+On Linux with Python 3.13.5 and cryptography 46.0.4, all 41 tests passed in the source tree and against the installed v0.2.0.dev0 wheel outside the source tree. All 15 Python files and pyproject.toml matched fetched GitHub blob hashes. Wheel built with existing build tools, without dependency downloads; not proof of fresh dependency resolution. New tests include conflicting evidence, signature tampering, duplicate record counting, missing targets, peer bundle exchange, independent signed proof validation and actual local HTTP report retrieval/rejection. No AI-provider calls or external source validation performed. Browser rendering and cross-platform CI still unverified. Repository remains private.
