@@ -1,5 +1,6 @@
 """Local node CLI. Exchange signed bundles without a central service."""
 import argparse
+import getpass
 import json
 import os
 from pathlib import Path
@@ -24,14 +25,21 @@ def main():
     sub.add_parser("search").add_argument("query")
     args = p.parse_args()
     if args.command == "keygen":
-        key = Ed25519PrivateKey.generate().private_bytes(serialization.Encoding.Raw, serialization.PrivateFormat.Raw, serialization.NoEncryption())
+        password = getpass.getpass("New key passphrase: ").encode()
+        if len(password) < 12:
+            p.error("passphrase must be at least 12 bytes")
+        if password != getpass.getpass("Repeat passphrase: ").encode():
+            p.error("passphrases differ")
+        key = Ed25519PrivateKey.generate().private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.BestAvailableEncryption(password))
         with os.fdopen(os.open(args.key, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "wb") as f:
             f.write(key)
         return
     store = Store(args.db)
     try:
         if args.command == "add":
-            key = Ed25519PrivateKey.from_private_bytes(Path(args.key).read_bytes())
+            key = serialization.load_pem_private_key(Path(args.key).read_bytes(), password=getpass.getpass("Key passphrase: ").encode())
+            if not isinstance(key, Ed25519PrivateKey):
+                p.error("expected an Ed25519 key")
             item = sign(create(args.claim, args.source, args.parent), key)
             store.ingest([item])
             print(item["record"]["id"])
