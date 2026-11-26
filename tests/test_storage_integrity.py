@@ -26,3 +26,16 @@ class StorageIntegrityTests(unittest.TestCase):
         self.store.db.execute("UPDATE records SET envelope='not-json'")
         with self.assertRaisesRegex(ValueError, "database integrity"):
             self.store.export()
+    def test_missing_parent_on_read(self):
+        child = sign(create("Revision", ["source"], self.item["record"]["id"]), Ed25519PrivateKey.generate())
+        self.store.ingest([child])
+        self.store.db.execute("DELETE FROM records WHERE id=?", (self.item["record"]["id"],))
+        with self.assertRaisesRegex(ValueError, "missing revision parent"):
+            self.store.export()
+    def test_corruption_blocks_new_ingest(self):
+        self.store.db.execute("UPDATE records SET envelope='broken'")
+        self.store.db.commit()
+        new = sign(create("New", ["source"]), Ed25519PrivateKey.generate())
+        with self.assertRaisesRegex(ValueError, "database integrity"):
+            self.store.ingest([new])
+        self.assertEqual(self.store.db.execute("SELECT COUNT(*) FROM records").fetchone()[0], 1)
