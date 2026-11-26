@@ -1,5 +1,6 @@
 """Persistent signed knowledge records, with explicit bundle exchange."""
 import json
+import os
 import sqlite3
 import re
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
@@ -28,8 +29,20 @@ def authentic(envelope):
 
 class Store:
     def __init__(self, path):
-        self.db = sqlite3.connect(path)
-        self.db.execute("CREATE TABLE IF NOT EXISTS records (id TEXT, author TEXT, envelope TEXT NOT NULL, PRIMARY KEY(id, author))")
+        filename = os.fspath(path)
+        if filename not in ("", ":memory:", b"", b":memory:"):
+            try:
+                fd = os.open(filename, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            except FileExistsError:
+                pass  # Do not change permissions on an existing database.
+            else:
+                os.close(fd)
+        self.db = sqlite3.connect(filename)
+        try:
+            self.db.execute("CREATE TABLE IF NOT EXISTS records (id TEXT, author TEXT, envelope TEXT NOT NULL, PRIMARY KEY(id, author))")
+        except BaseException:
+            self.db.close()
+            raise
     def close(self):
         self.db.close()
     def ingest(self, bundle):
@@ -57,8 +70,12 @@ class Store:
         records = []
         for record_id, author, raw in self.db.execute("SELECT id, author, envelope FROM records ORDER BY id, author"):
             try:
+                if not isinstance(raw, str) or len(raw) > 65536:
+                    raise ValueError("invalid stored record size or type")
                 item = json.loads(raw)
-                if not authentic(item) or item["record"]["id"] != record_id or item["public_key"] != author:
+                encoded = canonical(item)
+                if (len(encoded) > 65536 or encoded.decode("utf-8") != raw or not authentic(item)
+                        or item["record"]["id"] != record_id or item["public_key"] != author):
                     raise ValueError("invalid stored record")
             except (ValueError, TypeError, RecursionError) as exc:
                 raise ValueError("database integrity check failed") from exc
