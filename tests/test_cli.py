@@ -69,3 +69,22 @@ class CliTests(unittest.TestCase):
                         main()
             finally:
                 os.umask(old)
+
+    def test_diagnostics_reject_uninitialized_or_unrelated_database(self):
+        import sqlite3
+        with tempfile.TemporaryDirectory() as d:
+            for name in ('empty', 'unrelated'):
+                database = Path(d) / (name + '.sqlite')
+                database.touch()
+                if name == 'unrelated':
+                    with contextlib.closing(sqlite3.connect(database)) as conn:
+                        conn.execute('CREATE TABLE unrelated (value TEXT)')
+                        conn.commit()
+                original = database.read_bytes()
+                output = Path(d) / 'backup.sqlite'
+                for command in [('doctor',), ('search', 'query'), ('export', str(output)), ('backup', str(output))]:
+                    with self.subTest(name=name, command=command), patch('sys.argv', ['node_cli.py', '--db', str(database), *command]), contextlib.redirect_stderr(io.StringIO()), contextlib.redirect_stdout(io.StringIO()):
+                        with self.assertRaises((ValueError, SystemExit, sqlite3.Error)):
+                            main()
+                        self.assertEqual(database.read_bytes(), original)
+                        self.assertFalse(output.exists())
