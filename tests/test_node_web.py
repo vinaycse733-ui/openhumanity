@@ -53,6 +53,7 @@ class WebTests(unittest.TestCase):
     def test_reject_cross_origin_and_bad_token(self):
         self.assertEqual(self.add(origin="https://example.org")[0], 403)
         self.assertEqual(self.add(token="wrong")[0], 403)
+        self.assertEqual(self.add(token="é")[0], 403)
         self.assertIn("No matching records.", self.request("GET", "/")[1])
 
     def test_reject_untrusted_host(self):
