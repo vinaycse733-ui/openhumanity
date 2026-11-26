@@ -31,3 +31,12 @@ class CliTests(unittest.TestCase):
             self.assertEqual(records[0]["record"]["id"], record_id)
             self.assertTrue(authentic(records[0]))
             self.assertEqual(json.loads(run("--db", second, "doctor")), {"status": "ok", "verified_records": 1})
+            snapshot = str(Path(d) / "backup.sqlite")
+            self.assertEqual(json.loads(run("--db", second, "backup", snapshot)), {"status": "ok", "verified_records": 1})
+            self.assertEqual(json.loads(run("--db", snapshot, "search", "Example")), records)
+            with self.assertRaises(FileExistsError):
+                run("--db", second, "backup", snapshot)
+            missing = Path(d) / "missing.sqlite"
+            with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                run("--db", str(missing), "doctor")
+            self.assertFalse(missing.exists())
