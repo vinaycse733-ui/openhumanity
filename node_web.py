@@ -2,6 +2,8 @@
 import argparse
 import getpass
 import html
+import json
+import re
 import secrets
 import sqlite3
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -11,6 +13,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from node_store import Store, sign
 from openhumanity import create
+from trust import report
 
 def esc(value):
     return html.escape(str(value), quote=True)
@@ -20,7 +23,7 @@ def handler(store, key, token):
         timeout = 10
 
         def trusted_host(self):
-            return self.headers.get("Host") == "127.0.0.1:" + str(self.server.server_port)
+            return self.headers.get_all("Host") == ["127.0.0.1:" + str(self.server.server_port)]
 
         def page(self, query="", error="", code=200):
             cards = []
@@ -32,7 +35,8 @@ def handler(store, key, token):
             for item in items:
                 record = item["record"]
                 body = record["body"]
-                cards.append("<article><h3>" + esc(body["claim"]) + "</h3><p>" + "<br>".join(esc(s) for s in body["sources"]) + "</p><small>Record: " + esc(record["id"]) + "<br>Signer: " + esc(item["public_key"]) + "<br>Parent: " + esc(body["parent"] or "None") + "</small></article>")
+                label = "Evidence: " + esc(body["relation"]) + " for " + esc(body["target"]) if body["version"] == 2 else '<a href="/v1/claims/' + esc(record["id"]) + '/report">Evidence report (JSON)</a>'
+                cards.append("<article><p>" + label + "</p><h3>" + esc(body["claim"]) + "</h3><p>" + "<br>".join(esc(s) for s in body["sources"]) + "</p><small>Record: " + esc(record["id"]) + "<br>Signer: " + esc(item["public_key"]) + "<br>Parent: " + esc(body["parent"] or "None") + "</small></article>")
             markup = """<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>OpenHumanity | Signed node</title><style>body{font:16px/1.6 system-ui;max-width:850px;margin:32px auto;padding:0 20px;background:#f5f4ef;color:#202722}h1{font-size:42px;letter-spacing:-.05em}section,article{background:white;border:1px solid #ccd4cc;padding:20px;margin:16px 0;border-radius:10px;overflow-wrap:anywhere}label{display:block;font-weight:bold}input,textarea{box-sizing:border-box;width:100%;font:inherit;padding:10px;margin:5px 0 12px;border:1px solid #aeb8af;border-radius:5px}button{font:inherit;padding:9px 16px;background:#214c38;color:white;border:0;border-radius:5px}</style><h1>OpenHumanity</h1><p>Signed knowledge, stored on this device. Signatures identify keys, not truth or real-world identity.</p>"""
             markup += "<p role='status'>" + esc(error) + "</p>"
             markup += '<section><h2>Publish locally</h2><form method="post" action="/add"><input type="hidden" name="token" value="' + esc(token) + '"><label for="claim">Claim</label><textarea id="claim" name="claim" maxlength="4000" required></textarea><label for="sources">Sources (one per line)</label><textarea id="sources" name="sources" maxlength="8000" required></textarea><label for="parent">Parent record ID (optional)</label><input id="parent" name="parent" maxlength="64"><button>Sign and save</button></form></section>'
@@ -53,6 +57,28 @@ def handler(store, key, token):
                 self.send_error(403)
                 return
             u = urlsplit(self.path)
+            match = re.fullmatch(r"/v1/claims/([0-9a-f]{64})/report", u.path)
+            if match:
+                if self.headers.get("Origin") not in (None, "http://127.0.0.1:" + str(self.server.server_port)) or self.headers.get("Sec-Fetch-Site") == "cross-site":
+                    self.send_error(403)
+                    return
+                try:
+                    raw = json.dumps(report(store, match.group(1)), ensure_ascii=False).encode("utf-8")
+                except KeyError:
+                    self.send_error(404, "Claim not found")
+                    return
+                except (ValueError, sqlite3.Error):
+                    self.send_error(503, "Knowledge database unavailable")
+                    return
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Content-Length", str(len(raw)))
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("X-Content-Type-Options", "nosniff")
+                self.send_header("Cross-Origin-Resource-Policy", "same-origin")
+                self.end_headers()
+                self.wfile.write(raw)
+                return
             if u.path != "/":
                 self.send_error(404)
                 return
