@@ -45,3 +45,7 @@ Do not mark verification complete without actual execution evidence. Keep reposi
 - Peer endpoint rejects non-loopback and duplicate Host headers, and browser-origin or fetch-metadata requests. HTTP loopback pulls bypass configured proxies. Remote HTTPS pulls retain their previous proxy behavior; remote serving through a separately secured proxy remains untested.
 - Executed five peer tests locally (Python 3.13.5, cryptography 46.0.4), all passed: four new HTTP boundary tests with test stores and the existing real signed-record SQLite exchange. Git hashes of all five tested source/test files match the committed blobs. Full regression suite not rerun in this iteration.
 - Existing CI matrix now installs the package and executes tests outside the source directory plus entry-point smoke checks. CI execution results remain unverified.
+
+### Revision integrity and diagnostics
+- Imports validate existing signed records and revision dependencies inside a write transaction before adding new records. Missing revision parents now fail read verification. Added CLI `doctor` command for SQLite quick_check and signed graph validation.
+- Linux Python 3.13.5 / cryptography 46.0.4: ran 12 tests (storage, integrity and CLI) in this session, all passed. Git blob hashes of all six executed Python files matched fetched or returned repository hashes. Full suite and cross-platform checks still pending after these changes.
