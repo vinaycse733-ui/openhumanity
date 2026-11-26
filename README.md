@@ -75,7 +75,7 @@ verified = verify_report(payload, expected_claim_id)
 quotation = check_excerpt(source_bytes, excerpt, expected_sha256)
 ```
 
-The SDK verifies signed records and recomputes evidence counts. Source bytes and any expected digest must be independently obtained by the caller. A quotation match does not prove source authenticity or factual accuracy. Snapshot hashes are not yet embedded in signed evidence.
+The SDK verifies signed records and recomputes evidence counts. Source bytes and any expected digest must be independently obtained by the caller. A quotation match does not prove source authenticity or factual accuracy. Use the optional `--snapshot source.txt` argument on the evidence command to sign a source fingerprint after an exact quotation check. Supply exactly one `--source`. `trust_sdk.verify_snapshot(envelope, source_bytes)` verifies the signed binding. Source bytes remain outside the database and must be retained separately. Neither the CLI nor SDK establishes that those bytes came from the claimed source URL.
 
 ## Roadmap
 1. Source snapshot verification and transparent citation provenance
