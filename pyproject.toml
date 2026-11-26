@@ -5,7 +5,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "openhumanity"
 version = "0.2.0.dev0"
-description = "Local-first signed knowledge commons prototype"
+description = "Local-first signed AI evidence and provenance prototype"
+license = {file = "LICENSE"}
 requires-python = ">=3.11"
 dependencies = ["cryptography>=44,<50"]
 
