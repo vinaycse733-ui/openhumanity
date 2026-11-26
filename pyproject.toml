@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openhumanity"
+version = "0.1.0rc1"
+description = "Local-first signed knowledge commons prototype"
+requires-python = ">=3.11"
+dependencies = ["cryptography>=44,<50"]
+
+[project.scripts]
+openhumanity = "node_cli:main"
+openhumanity-web = "node_web:main"
+openhumanity-peer = "peer:main"
+
+[tool.setuptools]
+py-modules = ["openhumanity", "node_store", "node_cli", "node_web", "peer"]
