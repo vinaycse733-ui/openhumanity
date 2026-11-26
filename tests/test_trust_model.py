@@ -16,11 +16,13 @@ class ModelTests(unittest.TestCase):
         self.id = claim['record']['id']
         evidence = sign(create_evidence(self.id, 'supports', 'Excerpt', ['source']), key)
         self.evidence = evidence['record']['id']
+        contrary = sign(create_evidence(self.id, 'contradicts', 'Different excerpt', ['other source']), key)
+        self.contrary = contrary['record']['id']
         ready = threading.Event()
         def node():
             store = Store(':memory:')
             try:
-                store.ingest([claim, evidence])
+                store.ingest([claim, evidence, contrary])
                 with HTTPServer(('127.0.0.1', 0), handler(store, key, 'token')) as server:
                     self.node = server
                     ready.set()
@@ -76,3 +78,19 @@ class ModelTests(unittest.TestCase):
     def test_bad_model_port(self):
         with self.assertRaises(ValueError):
             ask_local(self.id, 'Question', 'local-test', self.node.server_port, 0)
+
+    def test_uncited_conflicting_evidence_remains_visible(self):
+        result = self.ask()
+        self.assertTrue(result['conflicting_evidence_present'])
+        self.assertEqual(result['uncited_evidence_ids']['contradicts'], [self.contrary])
+        self.assertEqual(result['evidence_index']['contradicts'][0]['sources'], ['other source'])
+        self.assertFalse(result['evidence_index']['contradicts'][0]['cited_by_model'])
+        self.assertTrue(result['evidence_index']['supports'][0]['cited_by_model'])
+
+    def test_cited_conflict_is_not_a_truth_verdict(self):
+        self.reply['citations'] = [self.evidence, self.contrary, self.evidence]
+        result = self.ask()
+        self.assertEqual(result['citations'], [self.evidence, self.contrary])
+        self.assertEqual(result['uncited_evidence_ids']['contradicts'], [])
+        self.assertTrue(result['conflicting_evidence_present'])
+        self.assertEqual(result['truth_status'], 'not_determined')
