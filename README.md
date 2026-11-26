@@ -4,20 +4,22 @@ Knowledge belongs to everyone.
 
 An experimental knowledge commons with portable, source-backed claims and content-addressed revisions.
 
-## Run locally
+## Run the signed browser application
 
-Clone this repository, then run `python -m http.server 8000 --bind 127.0.0.1` from its root. Open http://localhost:8000 in a browser. Python 3.11+ recommended. No third-party runtime dependencies.
+Python 3.11+ is required. Clone the repository and run:
 
-## Features
-- Create claims with sources and revision references.
-- Search local records, export and import JSON.
-- Verify SHA-256 fingerprints. Browser data stays in local storage; export backups regularly.
+```sh
+python -m venv .venv
+# Activate the virtual environment for your platform.
+python -m pip install -r requirements.txt
+python node_cli.py keygen identity.pem
+python node_web.py --key identity.pem --db node.sqlite
+```
+
+Open http://127.0.0.1:8000 in a browser. The server listens only on loopback. Do not expose it through port forwarding or a public reverse proxy. Keep private keys and database files in a restricted local directory. Do not run a generic static file server from the repository root; it may expose those files. The older index.html is an unsigned browser-only experiment, not the signed node application.
 
 ## Tests
 `python -m unittest discover -s tests -v`
-
-## Limitations
-This is a local prototype, not a distributed network. Hashes detect changes relative to trusted identifiers, not truth or authorship. Do not enter sensitive personal information. Browser storage is not encrypted by this application. Browser compatibility and interoperability need further testing.
 
 ## Signed node quickstart
 Install Python 3.11+ and run:
@@ -42,12 +44,12 @@ In another:
 ```sh
 python peer.py --db second.sqlite pull http://127.0.0.1:8765
 ```
-Remote pulls require HTTPS. Serving remotely requires a separately configured TLS reverse proxy and access controls. The server exports the entire selected database, has no authentication, and is not suitable for direct internet exposure. Exchange is manual and limited to 1000 records and 8 MiB per network bundle. No automatic discovery or pagination yet. The browser prototype uses unsigned local records; it is not integrated with signed nodes.
+Remote pulls require HTTPS. Serving remotely requires a separately configured TLS reverse proxy and access controls. The server exports the entire selected database, has no authentication, and is not suitable for direct internet exposure. Exchange is manual and limited to 1000 records and 8 MiB per network bundle. No automatic discovery or pagination yet. The dedicated node_web.py browser UI uses signed node storage. The older index.html is separate.
 
 ## Roadmap
 1. Test and harden signed node and replication
 2. Pagination, conflict handling and explicit trust policies
 3. Source assessment and moderation
-4. Integrated accessible multilingual interface
+4. Accessibility and multilingual interface improvements
 
 Private development repository; public release and licensing pending review.
