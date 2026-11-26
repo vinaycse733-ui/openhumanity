@@ -82,6 +82,18 @@ openhumanity-ask CLAIM_ID "What does the evidence say?" --model YOUR_LOCAL_MODEL
 
 The command retrieves and independently verifies the report, explicitly sends the report and question to the loopback Ollama-compatible /api/chat endpoint, and validates returned citation IDs against the supplied evidence. It requests JSON output with no tools, bounds input and response sizes, refuses redirects and bypasses environment proxies. It does not download or install models, or make cloud API calls itself. Use a genuinely local model and a trusted runtime configuration that does not forward data to the cloud. The model may still misinterpret evidence, follow malicious text, omit disagreement or produce unsupported claims. Citation IDs being valid does not establish entailment. Output is labeled model_generated_not_fact_checked. Real inference has not been tested yet; integration tests use a controlled HTTP response fixture, not a language model.
 
+## Optional AI summarization (experimental)
+
+With the local signed node running and an already-installed model in a trusted Ollama runtime, run:
+
+```sh
+openhumanity-ai CLAIM_ID "What evidence supports or contradicts this claim?" --model YOUR_LOCAL_MODEL
+```
+
+The adapter fetches a verified report and submits its contents and your question to the configured loopback Ollama endpoint. It does not install models, use tools, fetch source URLs or follow HTTP redirects. Only use a runtime and model you have independently configured for local inference; the adapter cannot guarantee the runtime will not forward data to a cloud provider. The model receives claim and evidence text, so only submit data you are authorized to share with that runtime.
+
+The adapter rejects invalid citation identifiers, incomplete responses and oversized requests. Citation membership does not establish that the model's prose follows the evidence. The generated text is unverified, vulnerable to prompt injection and not a truth verdict. Model-specific context limits may be smaller than the adapter's byte limit. Real model inference has not yet been tested; HTTP-contract tests use a test server, not a model.
+
 ## Developer SDK
 
 ```python
