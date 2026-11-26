@@ -41,8 +41,13 @@ class Store:
         with self.db:
             if not self.db.in_transaction:
                 self.db.execute("BEGIN IMMEDIATE")
-            ids = {item["record"]["id"] for item in self.export()}
-            ids.update(item["record"]["id"] for item in bundle)
+            existing = self.export()
+            bodies = {item["record"]["id"]: item["record"]["body"] for item in existing + bundle}
+            ids = set(bodies)
+            for item in bundle:
+                body = item["record"]["body"]
+                if body["version"] == 2 and (body["target"] not in bodies or bodies[body["target"]]["version"] != 1):
+                    raise ValueError("evidence requires an existing claim")
             for item in bundle:
                 parent = item["record"]["body"]["parent"]
                 if parent is not None and parent not in ids:
@@ -61,6 +66,9 @@ class Store:
         ids = {item["record"]["id"] for item in records}
         if any(item["record"]["body"]["parent"] is not None and item["record"]["body"]["parent"] not in ids for item in records):
             raise ValueError("database integrity check failed: missing revision parent")
+        claims = {item["record"]["id"] for item in records if item["record"]["body"]["version"] == 1}
+        if any(item["record"]["body"]["version"] == 2 and item["record"]["body"]["target"] not in claims for item in records):
+            raise ValueError("database integrity check failed: missing evidence target")
         return records
     def search(self, query):
         return [item for item in self.export() if query.casefold() in json.dumps(item["record"]["body"], ensure_ascii=False).casefold()]
