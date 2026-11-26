@@ -125,6 +125,10 @@ The SDK verifies signed records and recomputes evidence counts. Source bytes and
 
 For cooperating publishers, `source_auth.attest` signs exact source bytes and an HTTPS source identifier. An application with an independently acquired publisher public key can use `source_auth.verify_published_evidence(envelope, source_bytes, attestation, expected_source, pinned_key)` to verify both the contributor's evidence and the publisher's detached signature. No automatic key discovery, URL retrieval or factual adjudication is performed. See TRUST_PROTOCOL.md.
 
+## Local publisher trust management
+
+Load a trusted local JSON policy with `PublisherPolicy.load("policy.json")` from `publisher_policy`. Its schema is openhumanity.publisher-policy.v1, with pins mapping exact HTTPS source identifiers to independently obtained publisher public keys and revoked_keys listing keys to reject. Call `policy.verify(envelope, source_bytes, attestation, expected_source)`. Unknown keys and sources are rejected. Revocation overrides pins; key rotation is manual. Policy files are local configuration and must be protected from unauthorized edits. See TRUST_PROTOCOL.md.
+
 ## Roadmap
 1. Source snapshot verification and transparent citation provenance
 2. Evidence authoring UI, developer SDK and model integrations
