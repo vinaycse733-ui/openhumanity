@@ -1,8 +1,10 @@
 """Local node CLI. Exchange signed bundles without a central service."""
 import argparse
+import contextlib
 import getpass
 import json
 import os
+import sqlite3
 from pathlib import Path
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives import serialization
@@ -24,6 +26,7 @@ def main():
         sub.add_parser(name).add_argument("file")
     sub.add_parser("search").add_argument("query")
     sub.add_parser("doctor", help="Check SQLite and signed revision integrity")
+    sub.add_parser("backup", help="Create a verified SQLite snapshot").add_argument("file")
     args = p.parse_args()
     if args.command == "keygen":
         password = getpass.getpass("New key passphrase: ").encode()
@@ -35,6 +38,8 @@ def main():
         with os.fdopen(os.open(args.key, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "wb") as f:
             f.write(key)
         return
+    if args.command in ("doctor", "backup") and not Path(args.db).is_file():
+        p.error("database does not exist")
     store = Store(args.db)
     try:
         if args.command == "add":
@@ -57,6 +62,24 @@ def main():
                 raise ValueError("bundle exceeds v0.1 import limits")
             with open(args.file, "xb") as f:
                 f.write(payload)
+        elif args.command == "backup":
+            destination = Path(args.file)
+            fd = os.open(destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            os.close(fd)
+            try:
+                with contextlib.closing(sqlite3.connect(destination)) as target:
+                    store.db.backup(target)
+                snapshot = Store(destination)
+                try:
+                    if snapshot.db.execute("PRAGMA quick_check").fetchall() != [("ok",)]:
+                        raise ValueError("backup SQLite integrity check failed")
+                    count = len(snapshot.export())
+                finally:
+                    snapshot.close()
+            except BaseException:
+                destination.unlink(missing_ok=True)
+                raise
+            print(json.dumps({"status": "ok", "verified_records": count}))
         elif args.command == "doctor":
             rows = store.db.execute("PRAGMA quick_check").fetchall()
             if rows != [("ok",)]:
